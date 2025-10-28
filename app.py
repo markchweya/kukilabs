@@ -5,7 +5,7 @@ from streamlit.components.v1 import html
 # 🌌 Streamlit Page Config
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="KUKIAI",
+    page_title="KUKI",
     page_icon="💜",
     layout="wide",
 )
