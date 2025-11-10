@@ -637,7 +637,7 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
         </ul>
 
         <div class="tip-box">
-          🔬 Want early access to new experiments? Use the <a class="sheet-link" id="labsJoin" href="#" role="button">Request Labs Access</a> and mention your course.
+          🔬 Want early access to new experiments? Use the <a class="sheet-link" id="labsJoin" href="https://chatgpt.com/g/g-6887621fc0ac8191933b2bcfba73a075-kuki" role="button">Request Labs Access</a> and mention your course.
         </div>
       </div>
     </div>
