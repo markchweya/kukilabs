@@ -643,12 +643,7 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
           <li><strong>Admin Console</strong> — course templates, usage analytics, model/version toggles, and access policies.</li>
         </ul>
 
-        <div class="section-label">HOW TO TRAIN KUKI</div>
-        <ul class="sheet-list">
-          <li>Upload clean course files (PDF, PPTX, DOCX). Separate by topic/week if possible.</li>
-          <li>Prefer searchable PDFs (not scans). If scanned, include text layers or a DOC version.</li>
-          <li>Name files clearly: <em>“AI_Week05_Knowledge_Representation.pdf”</em>, etc.</li>
-        </ul>
+      
 
         <div class="tip-box">
           🔬 Want early access to new experiments? Use the <a class="sheet-link" id="labsJoin" href="https://chatgpt.com/g/g-6887621fc0ac8191933b2bcfba73a075-kuki" role="button">Request Labs Access</a> and mention your course.
