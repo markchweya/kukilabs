@@ -428,7 +428,7 @@ canvas#stars {
 
 .scroll-orb{position:absolute; left:50%; top:0; transform:translate(-50%, -50%); width:44px; height:44px; border-radius:9999px; background:radial-gradient(circle at 30% 30%, rgba(140,120,255,.4) 0%, rgba(0,0,0,0) 70%); border:1px solid rgba(255,255,255,.2); box-shadow:0 20px 40px rgba(0,0,0,.9), 0 0 30px rgba(140,120,255,.7), 0 0 80px rgba(255,120,200,.4); display:flex; align-items:center; justify-content:center; font-size:.9rem; color:#fff; text-shadow:0 0 4px rgba(255,255,255,.8), 0 0 12px rgba(140,120,255,.8), 0 0 40px rgba(236,72,153,.6); pointer-events:none; transition:background .4s ease, box-shadow .4s ease, border .4s ease, color .4s ease, text-shadow .4s ease}
 .scroll-orb .orb-icon{transition:all .3s ease}
-.scroll-orb.day{background:radial-gradient(circle at 30% 30%, rgba(255,230,170,.45) 0%, rgba(0,0,0,0) 70%); border:1px solid rgba(255,255,255,.4); box-shadow:0 20px 40px rgba(0,0,0,.6), 0 0 30px rgba(255,200,150,.7), 0 0 80px rgba(255,255,210,.5); text-shadow:0 0 4px rgba(0,0,0,.8), 0 0 12px rgba(255,220,160,.8), 0 0 40px rgba(255,150,200,.6)}
+.scroll-orb.day{background:radial-gradient(circle at 30% 30%, rgba(255,230,170,.45) 0%, rgba(0,0,0,0) 70%); border:1px solid rgba(255,255,255,.4); box-shadow:0 20px 40px rgba(0,0,0,.6), 0 0 30px rgba(255,200,150,.7), 0 0 80px rgba(255,255,210,.5); text-shadow:0 0 4px rgba(0,0,0,.8), 0 0 12px rgba(255,220,160,.8)}
 
 .sheet-headline{font-size:.8rem; font-weight:600; letter-spacing:.15em; text-transform:uppercase; margin-bottom:.75rem; background:linear-gradient(90deg,#c084fc 0%,#818cf8 35%,#60a5fa 60%,#e879f9 100%); -webkit-background-clip:text; color:transparent; text-shadow:0 0 8px rgba(180,160,255,.8), 0 0 24px rgba(120,80,255,.5), 0 1px 0 rgba(0,0,0,.7), 0 2px 2px rgba(0,0,0,.9)}
 
@@ -629,6 +629,20 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
           <li><strong>Progress Tracker</strong> — visualize what you’ve revised vs. what’s left.</li>
         </ul>
 
+        <div class="section-label">FUTURE ROADMAP</div>
+        <ul class="sheet-list">
+          <li><strong>Offline Mode</strong> — on-device retrieval (RAG) so Kuki works without internet using your local notes.</li>
+          <li><strong>WhatsApp Integration</strong> — chat with Kuki via WhatsApp (Twilio / WhatsApp Cloud API), with secure file linking.</li>
+          <li><strong>Voice & Dictation</strong> — talk to Kuki, get spoken responses; auto-transcribe lectures to notes & flashcards.</li>
+          <li><strong>Image/Diagram Tutor</strong> — point at a diagram/equation → step-by-step explanations and labels.</li>
+          <li><strong>Auto Timecodes for Lectures</strong> — paste a video/recording → get chapter timecodes + question-cards.</li>
+          <li><strong>Lab Data Assistant</strong> — CSV/Excel helper for cleaning, plots, quick stats, and APA-style tables.</li>
+          <li><strong>Team Study Rooms</strong> — shared space per course (files, tasks, comments) with role permissions.</li>
+          <li><strong>Strict Citation Mode</strong> — every answer with page/slide anchors back to your uploaded files.</li>
+          <li><strong>Privacy Controls</strong> — per-file retention, redaction, and “never store” toggles.</li>
+          <li><strong>Admin Console</strong> — course templates, usage analytics, model/version toggles, and access policies.</li>
+        </ul>
+
         <div class="section-label">HOW TO TRAIN KUKI</div>
         <ul class="sheet-list">
           <li>Upload clean course files (PDF, PPTX, DOCX). Separate by topic/week if possible.</li>
@@ -677,8 +691,8 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
    CONFIG
 ===================================================== */
 const KUKI_AGENT_URL = "https://chatgpt.com/g/g-6887621fc0ac8191933b2bcfba73a075-kuki";
-const CONTACT_EMAIL   = "kuki@your-domain.example";     // ← replace with your real address
-const REPORT_URL      = "mailto:kuki@your-domain.example?subject=Kuki%20Issue%20Report"; // ← replace if you have a form
+const CONTACT_EMAIL   = "chweyamark@gmail.com";     // ← updated
+const REPORT_URL      = "mailto:chweyamark@gmail.com?subject=Kuki%20Issue%20Report"; // ← updated
 
 /* =====================================================
    STARFIELD + SHOOTING STAR
