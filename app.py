@@ -582,7 +582,7 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
         <ul class="sheet-list">
           <li>I only use USIU Africa lecturer's notes, notes from other students and notes <strong>you upload</strong> (PDFs, slides, notes).</li>
           <li>I can summarize, explain, extract definitions, compare concepts.</li>
-          <li>If it's not in your files, I’ll tell you: <em>“Sorry, but I can’t seem to get the answer to that right now.”</em></li>
+          <li>If it's not in my knowledge base, I’ll tell you: <em>“Sorry, but I can’t seem to get the answer to that right now.”</em></li>
         </ul>
 
     
