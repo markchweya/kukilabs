@@ -585,12 +585,7 @@ body.light-mode .sheet-aura{background:radial-gradient(circle at 50% 30%, rgba(2
           <li>If it's not in your files, I’ll tell you: <em>“Sorry, but I can’t seem to get the answer to that right now.”</em></li>
         </ul>
 
-        # <div class="section-label">WHAT YOU CAN ASK ME</div>
-        # <ul class="sheet-list">
-        #   <li>“Explain matrix inversion from my Linear Algebra notes.”</li>
-        #   <li>“Summarize knowledge representation from Week 5.”</li>
-        #   <li>“Differentiate between information literacy and information technology.”</li>
-        # </ul>
+    
 
         <div class="section-label">STYLE</div>
         <p>Would you like answers in a <strong>summary</strong>, a <strong>step-by-step explanation</strong>, or a <strong>study-notes format</strong>?</p>
