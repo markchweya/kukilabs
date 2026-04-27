@@ -1,3 +1,42 @@
 
+# Secrets and local config
+.env
+.env.*
+!.env.example
 .streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local app data and uploads
+.kuki_data/
+data/
+kuki_storage/
+
+# Local AI model files are large and should not be committed.
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.pt
+models/**/*.pth
+models/**/*.onnx
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.Rhistory
+.vscode/
+.idea/
 
