@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from importlib.util import find_spec
 from pathlib import Path
 
 TEXT_EXTENSIONS = {".txt", ".md"}
@@ -18,13 +19,11 @@ class OCRStatus:
 
 
 def get_ocr_status() -> OCRStatus:
-    try:
-        from rapidocr_onnxruntime import RapidOCR  # noqa: F401
-    except Exception as exc:
+    if find_spec("rapidocr_onnxruntime") is None:
         return OCRStatus(
             ready=False,
             backend="RapidOCR",
-            message=f"Image OCR is unavailable until rapidocr-onnxruntime is installed: {exc}",
+            message="Image OCR is unavailable until rapidocr-onnxruntime is installed.",
         )
 
     return OCRStatus(

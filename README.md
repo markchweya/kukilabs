@@ -32,6 +32,23 @@ http://localhost:8501
 
 Open that URL in your browser.
 
+The app entry point is `app.py`. Do not run `kuki/chat_page.py` from inside the `kuki` folder unless you are debugging that page directly.
+
+If your project is inside OneDrive, use the helper script instead:
+
+```powershell
+cd C:\Users\HP\OneDrive\Documents\GitHub\kukiai
+.\run_kuki.ps1
+```
+
+The script runs Streamlit from your user folder while pointing it back to this app. That avoids broken OneDrive placeholder reads from `.streamlit/config.toml`.
+
+The helper script skips dependency installation during normal launches so the app opens faster. If you change `requirements.txt`, run:
+
+```powershell
+.\run_kuki.ps1 -Install
+```
+
 ## Local model setup
 
 Kuki needs a local GGUF model before it can generate full AI rewrites. Without a model, the app still opens and shows a structured extraction fallback.
@@ -70,12 +87,22 @@ cd C:\Users\HP\OneDrive\Documents\GitHub\kukiai
 streamlit run app.py
 ```
 
+If Streamlit shows `OSError: [Errno 22] Invalid argument` while reading config, run:
+
+```powershell
+cd C:\Users\HP\OneDrive\Documents\GitHub\kukiai
+.\run_kuki.ps1
+```
+
+If you see `ModuleNotFoundError: No module named 'kuki'`, you are probably running a file from inside the `kuki` package. Go back to the project root and run `streamlit run app.py`, or use `.\run_kuki.ps1`.
+
 ## Troubleshooting
 
 - If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then activate `.venv` again.
 - If `llama-cpp-python` fails to install on Python 3.13, create the virtual environment with Python 3.11.
 - If Kuki says no model is found, check that `LLM_MODEL_PATH` points to the exact `.gguf` file.
 - If image OCR is unavailable, rerun `pip install -r requirements.txt` inside the active virtual environment.
+- If Streamlit fails while reading `.streamlit/config.toml`, use `.\run_kuki.ps1` or move the project outside OneDrive.
 
 ## Author
 

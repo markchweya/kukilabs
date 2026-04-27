@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from importlib.util import find_spec
 from pathlib import Path
 
 from kuki.core.config import get_settings
@@ -33,14 +34,12 @@ def get_local_model_status(model_path: Path | None = None) -> LocalModelStatus:
             threads=settings.llm_n_threads,
         )
 
-    try:
-        from llama_cpp import Llama  # noqa: F401
-    except Exception as exc:
+    if find_spec("llama_cpp") is None:
         return LocalModelStatus(
             ready=False,
             backend="llama.cpp",
             model_path=str(resolved_path),
-            message=f"llama-cpp-python is not available: {exc}",
+            message="llama-cpp-python is not installed in this environment.",
             threads=settings.llm_n_threads,
         )
 

@@ -6,11 +6,9 @@ from kuki.admin_page import render_admin_page
 from kuki.chat_page import render_chat_page
 from kuki.core.extract import get_ocr_status
 from kuki.core.llm_local import get_local_model_status
-from kuki.core.store import ensure_index_ready, index_stats
+from kuki.core.store import index_stats
 
 st.set_page_config(page_title="Kuki", page_icon=":brain:", layout="wide")
-
-ensure_index_ready()
 
 view = st.query_params.get("view", "home")
 

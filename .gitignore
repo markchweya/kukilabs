@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+.streamlit/config.toml
 .streamlit/secrets.toml
 
 # Python

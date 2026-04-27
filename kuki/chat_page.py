@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 import tempfile
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
@@ -224,3 +228,7 @@ def render_chat_page(topic=None):
     with st.expander("Extracted source text", expanded=False):
         st.text_area("Preview", result.extracted_text or "(No text extracted yet.)", height=220)
         st.caption(preview_text(result.extracted_text))
+
+
+if __name__ == "__main__":
+    render_chat_page()
