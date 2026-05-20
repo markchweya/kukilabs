@@ -11,14 +11,14 @@ if __package__ in {None, ""}:
 
 import streamlit as st
 
+from kuki.core.ai_engine import generate_ai_reply, get_ai_status
 from kuki.core.extract import SUPPORTED_EXTENSIONS, extract_text_from_file, get_ocr_status, preview_text
-from kuki.core.llm_local import LocalLLM, LocalLLMError, get_local_model_status
 
 
 SYSTEM_PROMPT = """
-You are Kuki, a private local AI assistant running on the user's own computer.
-Be useful, direct, warm, and concise. When uploaded context is provided, use it
-carefully and say when something is not present in the provided material.
+You are Kuki, a polished AI assistant for focused study, research, and everyday work.
+Be useful, direct, warm, and concise. When uploaded context is provided, use it carefully
+and say when something is not present in the provided material.
 Output Markdown only.
 """.strip()
 
@@ -281,16 +281,12 @@ def _build_history(chat: dict[str, Any]) -> str:
 
 def _fallback_reply(prompt: str, chat: dict[str, Any], reason: str) -> str:
     context = _build_context(chat)
-    lines = [
-        "I can run this chat with the built-in local model once a GGUF model is added.",
-        "",
-        f"Local model status: {reason}",
-    ]
+    lines = ["I could not reach the AI runtime just now.", "", reason]
     if context:
         lines.extend(
             [
                 "",
-                "I did process the uploaded material locally. Here is the most useful extracted preview:",
+                "I did process the uploaded material. Here is the most useful extracted preview:",
                 "",
                 preview_text(context, max_chars=900),
             ]
@@ -299,7 +295,7 @@ def _fallback_reply(prompt: str, chat: dict[str, Any], reason: str) -> str:
         lines.extend(
             [
                 "",
-                "For now, I can keep the conversation UI and file extraction working, but deeper answers need the local model file.",
+                "Please make sure Ollama is running, then send the message again.",
             ]
         )
     if prompt:
@@ -308,7 +304,7 @@ def _fallback_reply(prompt: str, chat: dict[str, Any], reason: str) -> str:
 
 
 def _generate_reply(prompt: str, chat: dict[str, Any]) -> tuple[str, str]:
-    status = get_local_model_status()
+    status = get_ai_status()
     if not status.ready:
         return _fallback_reply(prompt, chat, status.message), status.message
 
@@ -326,18 +322,18 @@ User message:
 """.strip()
 
     try:
-        reply = LocalLLM().generate(
+        reply = generate_ai_reply(
             system_prompt=SYSTEM_PROMPT,
             user_prompt=user_prompt,
-            temperature=0.35,
+            model=status.model,
         )
-    except (LocalLLMError, RuntimeError) as exc:
+    except Exception as exc:
         return _fallback_reply(prompt, chat, str(exc)), str(exc)
 
-    return reply or "I could not produce a response from the local model.", status.message
+    return reply or "I could not produce a response. Please try again.", status.message
 
 
-def _render_sidebar(model_ready: bool, model_message: str, ocr_ready: bool, ocr_message: str) -> None:
+def _render_sidebar(ai_ready: bool, ai_message: str, ocr_ready: bool, ocr_message: str) -> None:
     with st.sidebar:
         st.markdown("### Kuki")
         if st.button("New chat", use_container_width=True):
@@ -379,9 +375,9 @@ def _render_sidebar(model_ready: bool, model_message: str, ocr_ready: bool, ocr_
             st.caption(f"{item['name']}: {item['preview']}")
 
         st.divider()
-        st.markdown("#### Local runtime")
-        st.caption(f"AI: {'Ready' if model_ready else 'Needs model'}")
-        st.caption(model_message)
+        st.markdown("#### System")
+        st.caption(f"AI: {'Ready' if ai_ready else 'Offline'}")
+        st.caption(ai_message)
         st.caption(f"OCR: {'Ready' if ocr_ready else 'Needs setup'}")
         st.caption(ocr_message)
 
@@ -391,7 +387,7 @@ def _render_empty_state() -> None:
         """
 <div class="kuki-empty">
   <h1>What are we working on?</h1>
-  <p>Chat with Kuki, upload notes or media, and let the local model answer from your computer when a GGUF model is available.</p>
+  <p>Chat with Kuki, upload notes or media, and keep your work moving in a clean focused workspace.</p>
   <div class="kuki-pills">
     <div class="kuki-pill">Summarize uploaded notes into revision points</div>
     <div class="kuki-pill">Explain a concept step by step</div>
@@ -408,11 +404,11 @@ def render_chat_page(topic=None):
     _ensure_state()
     _inject_chat_css()
 
-    model_status = get_local_model_status()
+    ai_status = get_ai_status()
     ocr_status = get_ocr_status()
-    _render_sidebar(model_status.ready, model_status.message, ocr_status.ready, ocr_status.message)
+    _render_sidebar(ai_status.ready, ai_status.message, ocr_status.ready, ocr_status.message)
 
-    status_text = "Local AI ready" if model_status.ready else "Add a GGUF model to enable local AI"
+    status_text = "Ready" if ai_status.ready else "AI offline"
     st.markdown(
         f"""
 <div class="kuki-topbar">
@@ -420,7 +416,7 @@ def render_chat_page(topic=None):
     <div class="kuki-logo">K</div>
     <div>
       <div class="kuki-title">Kuki</div>
-      <div class="kuki-subtitle">Private chat powered by your PC</div>
+      <div class="kuki-subtitle">AI workspace</div>
     </div>
   </div>
   <div class="kuki-status">{status_text}</div>
@@ -449,10 +445,10 @@ def render_chat_page(topic=None):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking locally..."):
+        with st.spinner("Thinking..."):
             reply, model_message = _generate_reply(prompt, chat)
         st.markdown(reply)
-        if not model_status.ready:
+        if not ai_status.ready:
             st.caption(model_message)
 
     chat["messages"].append({"role": "assistant", "content": reply})

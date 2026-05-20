@@ -4,8 +4,8 @@ import streamlit as st
 
 from kuki.admin_page import render_admin_page
 from kuki.chat_page import render_chat_page
+from kuki.core.ai_engine import get_ai_status
 from kuki.core.extract import get_ocr_status
-from kuki.core.llm_local import get_local_model_status
 from kuki.core.store import index_stats
 
 st.set_page_config(page_title="Kuki", page_icon=":brain:", layout="wide")
@@ -19,7 +19,7 @@ elif view == "admin":
 else:
     stats_payload = index_stats()
     stats = json.dumps(stats_payload, indent=2)
-    model_status = get_local_model_status()
+    ai_status = get_ai_status()
     ocr_status = get_ocr_status()
 
     html = f"""
@@ -27,11 +27,10 @@ else:
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;">
     <div>
       <div style="font-weight:900;font-size:1.5rem;letter-spacing:.08em;">
-        KUKI <span style="opacity:.65;font-weight:600;">Study Assistant</span>
+        KUKI <span style="opacity:.65;font-weight:600;">AI Workspace</span>
       </div>
       <div style="margin-top:10px;max-width:760px;line-height:1.6;opacity:.85;">
-        Turn raw notes into clean, structured study material locally on your CPU. Kuki supports pasted notes, note images,
-        and uploaded study files, then rewrites them in Simple or Complex mode for revision.
+        Chat with Kuki, upload notes and media, extract useful context, and work through ideas in a focused AI workspace.
       </div>
     </div>
     <div style="opacity:.72;">Kind  Intelligent  Yours</div>
@@ -57,9 +56,9 @@ else:
 
   <div style="margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
     <div style="padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
-      <div style="font-weight:800;margin-bottom:8px;">Local CPU Model</div>
-      <div style="opacity:.86;">{"Ready" if model_status.ready else "Setup needed"}</div>
-      <div style="opacity:.62;margin-top:8px;font-size:.92rem;">{model_status.message}</div>
+      <div style="font-weight:800;margin-bottom:8px;">AI</div>
+      <div style="opacity:.86;">{"Ready" if ai_status.ready else "Offline"}</div>
+      <div style="opacity:.62;margin-top:8px;font-size:.92rem;">{ai_status.message}</div>
     </div>
     <div style="padding:16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
       <div style="font-weight:800;margin-bottom:8px;">Image OCR</div>

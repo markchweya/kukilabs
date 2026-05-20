@@ -1,15 +1,14 @@
 # Kuki
 
-Kuki is a local, CPU-first study assistant built in Streamlit. It turns raw notes into structured study material for learners who want cleaner revision sheets from messy inputs.
+Kuki is a production-style AI workspace built in Streamlit. It supports chat, uploaded study material, document extraction, and local OCR.
 
 ## What Kuki does
 
-- Extracts text from pasted notes, PDFs, DOCX files, PPTX files, and note images.
-- Rewrites notes in `Simple` or `Complex` learning modes.
-- Supports strict extraction-only mode or a fill-gaps mode.
-- Produces structured output with definitions, main points, explanations, examples, mistakes, questions, and summary.
-- Runs locally with a GGUF model through `llama.cpp` when available.
-- Falls back to a structured extraction view if the local model is not set up yet.
+- Provides a ChatGPT-style chat interface with conversation history.
+- Extracts text from PDFs, DOCX files, PPTX files, note images, TXT, and Markdown.
+- Uses uploaded material as chat context.
+- Uses Ollama as the AI runtime when it is running.
+- Keeps OCR local through `rapidocr-onnxruntime`.
 
 ## Quick start
 
@@ -58,33 +57,26 @@ The helper script skips dependency installation during normal launches so the ap
 npm run dev:install
 ```
 
-## Local model setup
+## AI setup
 
-Kuki needs a local GGUF model before it can generate full AI rewrites. Without a model, the app still opens and shows a structured extraction fallback.
+Kuki uses Ollama for AI responses. This machine already has Ollama installed and models available, so the app can answer immediately when Ollama is running.
 
-1. Put a GGUF model file in `models/llm/`.
-2. Create or update `.env.local` with your model path:
+To choose a specific Ollama model, set `KUKI_AI_MODEL` in `.env.local`:
 
 ```env
-LLM_MODEL_PATH=.\models\llm\model.gguf
-LLM_N_THREADS=4
-LLM_N_CTX=4096
-LLM_MAX_TOKENS=900
+KUKI_AI_MODEL=llama3.2:3b
 ```
 
-3. Restart Streamlit after changing `.env.local`.
-
-For a first CPU test, use a small quantized instruct model such as a 1B-3B GGUF file. Larger models may work, but they will be slower on CPU.
+Restart Streamlit after changing `.env.local`.
 
 ## Image notes and OCR
 
 Image uploads use local OCR through `rapidocr-onnxruntime`. If OCR is not installed or cannot load, Kuki will still run, but image extraction will show as unavailable in the sidebar.
 
-## Notes on CPU-local inference
+## Notes on AI and OCR
 
-- Kuki uses `n_gpu_layers=0`, so inference stays on CPU.
+- Ollama manages the model runtime for Kuki.
 - Image OCR is local too when `rapidocr-onnxruntime` is installed.
-- On Python 3.13, install a compatible `llama-cpp-python` build manually or use Python 3.11 for the smoothest setup.
 
 ## Daily run command
 
@@ -108,8 +100,8 @@ If you see `ModuleNotFoundError: No module named 'kuki'`, you are probably runni
 ## Troubleshooting
 
 - If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then activate `.venv` again.
-- If `llama-cpp-python` fails to install on Python 3.13, create the virtual environment with Python 3.11.
-- If Kuki says no model is found, check that `LLM_MODEL_PATH` points to the exact `.gguf` file.
+- If Kuki says AI is offline, start Ollama and refresh the app.
+- If you want a different model, set `KUKI_AI_MODEL` to an installed Ollama model name.
 - If image OCR is unavailable, rerun `pip install -r requirements.txt` inside the active virtual environment.
 - If Streamlit fails while reading `.streamlit/config.toml`, use `.\run_kuki.ps1` or move the project outside OneDrive.
 

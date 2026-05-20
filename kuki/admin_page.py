@@ -4,22 +4,22 @@ from pathlib import Path
 
 import streamlit as st
 
+from kuki.core.ai_engine import get_ai_status
 from kuki.core.extract import SUPPORTED_EXTENSIONS, extract_text_from_file, get_ocr_status, preview_text
-from kuki.core.llm_local import get_local_model_status
 from kuki.core.store import delete_doc, index_stats, list_docs, rebuild_index, save_upload
 
 
 def render_admin_page():
-    model_status = get_local_model_status()
+    ai_status = get_ai_status()
     ocr_status = get_ocr_status()
 
-    st.subheader("Admin  Local Notes Library")
-    st.caption("Manage the local note library that Kuki can reuse for study generation and revision support.")
+    st.subheader("Admin  Knowledge Library")
+    st.caption("Manage the note library that Kuki can use as chat context.")
 
     col1, col2 = st.columns(2)
     with col1:
-        st.info(f"CPU model: {'Ready' if model_status.ready else 'Setup needed'}")
-        st.caption(model_status.message)
+        st.info(f"AI: {'Ready' if ai_status.ready else 'Offline'}")
+        st.caption(ai_status.message)
     with col2:
         st.info(f"OCR: {'Ready' if ocr_status.ready else 'Optional setup'}")
         st.caption(ocr_status.message)
