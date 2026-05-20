@@ -10,7 +10,7 @@ from kuki.core.store import index_stats
 
 st.set_page_config(page_title="Kuki", page_icon=":brain:", layout="wide")
 
-view = st.query_params.get("view", "home")
+view = st.query_params.get("view", "chat")
 
 if view == "chat":
     render_chat_page()

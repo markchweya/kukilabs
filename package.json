@@ -1,0 +1,11 @@
+{
+  "name": "kukiai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local CPU-first Kuki study assistant launcher.",
+  "scripts": {
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1",
+    "dev:install": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1 -Install",
+    "start": "npm run dev"
+  }
+}

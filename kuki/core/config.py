@@ -42,13 +42,19 @@ def get_settings() -> Settings:
     index_dir.mkdir(parents=True, exist_ok=True)
 
     default_threads = max(1, (os.cpu_count() or 2) - 1)
+    default_model_path = REPO_ROOT / "models" / "llm" / "model.gguf"
+    if os.getenv("LLM_MODEL_PATH"):
+        llm_model_path = Path(os.getenv("LLM_MODEL_PATH", "")).resolve()
+    else:
+        model_candidates = sorted((REPO_ROOT / "models" / "llm").glob("*.gguf"))
+        llm_model_path = (model_candidates[0] if model_candidates else default_model_path).resolve()
 
     return Settings(
         admin_password=os.getenv("ADMIN_PASSWORD", "change-me-now"),
         data_dir=data_dir,
         uploads_dir=uploads_dir,
         index_dir=index_dir,
-        llm_model_path=Path(os.getenv("LLM_MODEL_PATH", str(REPO_ROOT / "models" / "llm" / "model.gguf"))).resolve(),
+        llm_model_path=llm_model_path,
         llm_n_ctx=_int_env("LLM_N_CTX", 4096),
         llm_n_threads=_int_env("LLM_N_THREADS", default_threads),
         llm_max_tokens=_int_env("LLM_MAX_TOKENS", 900),

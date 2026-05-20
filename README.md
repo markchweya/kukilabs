@@ -17,6 +17,15 @@ From the project folder:
 
 ```powershell
 cd C:\Users\HP\OneDrive\Documents\GitHub\kukiai
+npm run dev
+```
+
+That command launches Streamlit through the Kuki helper script. The helper keeps its Python virtual environment in your local app data folder so OneDrive does not freeze Python imports or cache files.
+
+If you prefer to manage the Python environment manually:
+
+```powershell
+cd C:\Users\HP\OneDrive\Documents\GitHub\kukiai
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -46,7 +55,7 @@ The script runs Streamlit from your user folder while pointing it back to this a
 The helper script skips dependency installation during normal launches so the app opens faster. If you change `requirements.txt`, run:
 
 ```powershell
-.\run_kuki.ps1 -Install
+npm run dev:install
 ```
 
 ## Local model setup
