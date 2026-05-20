@@ -21,6 +21,10 @@ htmlcov/
 venv/
 env/
 
+# Node/Vite
+node_modules/
+dist/
+
 # Local app data and uploads
 .kuki_data/
 data/

@@ -1,11 +1,19 @@
 {
   "name": "kukiai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Local CPU-first Kuki study assistant launcher.",
+  "description": "Kuki AI workspace.",
+  "type": "module",
   "scripts": {
-    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1",
-    "dev:install": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1 -Install",
-    "start": "npm run dev"
-  }
+    "dev": "vite --host 0.0.0.0 --port 8501",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 8501",
+    "legacy:streamlit": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1",
+    "legacy:install": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1 -Install"
+  },
+  "dependencies": {
+    "vite": "^7.3.0",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {}
 }
