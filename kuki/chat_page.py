@@ -13,6 +13,7 @@ import streamlit as st
 
 from kuki.core.ai_engine import generate_ai_reply, get_ai_status
 from kuki.core.extract import SUPPORTED_EXTENSIONS, extract_text_from_file, get_ocr_status, preview_text
+from kuki.ui.logo import get_logo_svg
 
 
 SYSTEM_PROMPT = """
@@ -56,18 +57,12 @@ html, body, .stApp {
   background: rgba(255,255,255,.12) !important;
   border-color: rgba(255,255,255,.22) !important;
 }
-.kuki-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 18px;
-}
 .kuki-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  margin: 0 0 18px;
 }
 .kuki-logo {
   width: 38px;
@@ -86,18 +81,18 @@ html, body, .stApp {
   font-weight: 760;
   font-size: 1rem;
 }
-.kuki-subtitle {
-  color: #6b6b6b;
-  font-size: .86rem;
+.stButton > button[kind="tertiary"] {
+  border: 0 !important;
+  background: transparent !important;
+  color: #343434 !important;
+  box-shadow: none !important;
+  padding: 8px 0 !important;
+  font-weight: 650 !important;
+  font-size: 1rem !important;
 }
-.kuki-status {
-  border: 1px solid #dfdfdc;
-  background: #fff;
-  color: #333;
-  border-radius: 999px;
-  padding: 7px 10px;
-  font-size: .82rem;
-  white-space: nowrap;
+.stButton > button[kind="tertiary"]:hover {
+  color: #111 !important;
+  background: transparent !important;
 }
 [data-testid="stChatMessage"] {
   background: transparent !important;
@@ -201,12 +196,6 @@ html, body, .stApp {
     padding-left: .75rem;
     padding-right: .75rem;
   }
-  .kuki-topbar {
-    align-items: flex-start;
-  }
-  .kuki-status {
-    display: none;
-  }
 }
 </style>
 """,
@@ -242,25 +231,6 @@ def _short_title(text: str) -> str:
     if not cleaned:
         return "New chat"
     return cleaned[:36].rstrip() + ("..." if len(cleaned) > 36 else "")
-
-
-def _logo_mark() -> str:
-    return """
-<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-  <defs>
-    <filter id="kuki-dot-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#0F172A" flood-opacity=".13"/>
-    </filter>
-  </defs>
-  <g filter="url(#kuki-dot-shadow)">
-    <circle cx="20" cy="21" r="6.1" fill="#111111"/>
-    <circle cx="20" cy="8.6" r="4.3" fill="#111111"/>
-    <circle cx="30.7" cy="26.8" r="4.3" fill="#2563EB"/>
-    <circle cx="9.3" cy="26.8" r="4.3" fill="#14B8A6"/>
-  </g>
-  <path d="M20 14.2v-2.1M25.2 24.2l2 1.1M14.8 24.2l-2 1.1" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" opacity=".26"/>
-</svg>
-""".strip()
 
 
 def _extract_upload(uploaded_file) -> dict[str, str]:
@@ -359,7 +329,7 @@ User message:
 def _render_sidebar(ai_ready: bool, ai_message: str, ocr_ready: bool, ocr_message: str) -> None:
     with st.sidebar:
         st.markdown("### Kuki")
-        if st.button("New chat", use_container_width=True):
+        if st.button("New chat", icon=":material/edit_square:", use_container_width=True):
             _new_chat()
             st.rerun()
 
@@ -413,22 +383,23 @@ def render_chat_page(topic=None):
     ocr_status = get_ocr_status()
     _render_sidebar(ai_status.ready, ai_status.message, ocr_status.ready, ocr_status.message)
 
-    status_text = "Ready" if ai_status.ready else "AI offline"
-    st.markdown(
-        f"""
-<div class="kuki-topbar">
+    header_left, header_right = st.columns([1, 0.24], vertical_alignment="center")
+    with header_left:
+        st.markdown(
+            f"""
   <div class="kuki-brand">
-    <div class="kuki-logo">{_logo_mark()}</div>
+    <div class="kuki-logo">{get_logo_svg()}</div>
     <div>
       <div class="kuki-title">Kuki</div>
-      <div class="kuki-subtitle">AI workspace</div>
     </div>
   </div>
-  <div class="kuki-status">{status_text}</div>
-</div>
 """,
-        unsafe_allow_html=True,
-    )
+            unsafe_allow_html=True,
+        )
+    with header_right:
+        if st.button("New chat", key="top-new-chat", icon=":material/edit_square:", type="tertiary"):
+            _new_chat()
+            st.rerun()
 
     chat = _active_chat()
     for message in chat["messages"]:

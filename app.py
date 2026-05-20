@@ -7,8 +7,9 @@ from kuki.chat_page import render_chat_page
 from kuki.core.ai_engine import get_ai_status
 from kuki.core.extract import get_ocr_status
 from kuki.core.store import index_stats
+from kuki.ui.logo import get_page_icon
 
-st.set_page_config(page_title="Kuki", page_icon=":brain:", layout="wide")
+st.set_page_config(page_title="Kuki", page_icon=get_page_icon(), layout="wide")
 
 view = st.query_params.get("view", "chat")
 
