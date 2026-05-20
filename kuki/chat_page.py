@@ -70,14 +70,17 @@ html, body, .stApp {
   min-width: 0;
 }
 .kuki-logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: #111;
-  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: transparent;
   display: grid;
   place-items: center;
-  font-weight: 800;
+}
+.kuki-logo svg {
+  width: 34px;
+  height: 34px;
+  display: block;
 }
 .kuki-title {
   font-weight: 760;
@@ -241,6 +244,25 @@ def _short_title(text: str) -> str:
     return cleaned[:36].rstrip() + ("..." if len(cleaned) > 36 else "")
 
 
+def _logo_mark() -> str:
+    return """
+<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="kuki-dot-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#0F172A" flood-opacity=".13"/>
+    </filter>
+  </defs>
+  <g filter="url(#kuki-dot-shadow)">
+    <circle cx="20" cy="21" r="6.1" fill="#111111"/>
+    <circle cx="20" cy="8.6" r="4.3" fill="#111111"/>
+    <circle cx="30.7" cy="26.8" r="4.3" fill="#2563EB"/>
+    <circle cx="9.3" cy="26.8" r="4.3" fill="#14B8A6"/>
+  </g>
+  <path d="M20 14.2v-2.1M25.2 24.2l2 1.1M14.8 24.2l-2 1.1" fill="none" stroke="#111111" stroke-width="1.8" stroke-linecap="round" opacity=".26"/>
+</svg>
+""".strip()
+
+
 def _extract_upload(uploaded_file) -> dict[str, str]:
     suffix = Path(uploaded_file.name).suffix or ".txt"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
@@ -396,7 +418,7 @@ def render_chat_page(topic=None):
         f"""
 <div class="kuki-topbar">
   <div class="kuki-brand">
-    <div class="kuki-logo">K</div>
+    <div class="kuki-logo">{_logo_mark()}</div>
     <div>
       <div class="kuki-title">Kuki</div>
       <div class="kuki-subtitle">AI workspace</div>
