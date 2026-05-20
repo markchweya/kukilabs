@@ -96,43 +96,6 @@ html, body, .stApp {
   font-size: .82rem;
   white-space: nowrap;
 }
-.kuki-empty {
-  min-height: 48vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 14px;
-}
-.kuki-empty h1 {
-  margin: 0;
-  font-size: clamp(1.9rem, 4vw, 2.8rem);
-  line-height: 1.05;
-  letter-spacing: 0;
-}
-.kuki-empty p {
-  margin: 0;
-  color: #686868;
-  max-width: 560px;
-  line-height: 1.55;
-}
-.kuki-pills {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  width: min(620px, 100%);
-  margin-top: 10px;
-}
-.kuki-pill {
-  text-align: left;
-  padding: 12px 13px;
-  border: 1px solid #e2e2df;
-  border-radius: 12px;
-  background: #fff;
-  color: #333;
-  font-size: .92rem;
-}
 [data-testid="stChatMessage"] {
   background: transparent !important;
   padding: 0.35rem 0 !important;
@@ -189,6 +152,47 @@ html, body, .stApp {
 .stFileUploader {
   border-radius: 12px;
 }
+.kuki-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #3a3a3a;
+  font-weight: 500;
+}
+.kuki-thinking-orb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #dadad6;
+  border-top-color: #111;
+  animation: kuki-spin .82s linear infinite;
+}
+.kuki-thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.kuki-thinking-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #111;
+  opacity: .28;
+  animation: kuki-pulse 1s ease-in-out infinite;
+}
+.kuki-thinking-dots span:nth-child(2) {
+  animation-delay: .14s;
+}
+.kuki-thinking-dots span:nth-child(3) {
+  animation-delay: .28s;
+}
+@keyframes kuki-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes kuki-pulse {
+  0%, 80%, 100% { opacity: .22; transform: translateY(0); }
+  40% { opacity: .95; transform: translateY(-3px); }
+}
 @media (max-width: 720px) {
   .block-container {
     padding-left: .75rem;
@@ -199,9 +203,6 @@ html, body, .stApp {
   }
   .kuki-status {
     display: none;
-  }
-  .kuki-pills {
-    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -382,24 +383,6 @@ def _render_sidebar(ai_ready: bool, ai_message: str, ocr_ready: bool, ocr_messag
         st.caption(ocr_message)
 
 
-def _render_empty_state() -> None:
-    st.markdown(
-        """
-<div class="kuki-empty">
-  <h1>What are we working on?</h1>
-  <p>Chat with Kuki, upload notes or media, and keep your work moving in a clean focused workspace.</p>
-  <div class="kuki-pills">
-    <div class="kuki-pill">Summarize uploaded notes into revision points</div>
-    <div class="kuki-pill">Explain a concept step by step</div>
-    <div class="kuki-pill">Turn slides into exam questions</div>
-    <div class="kuki-pill">Ask follow-up questions from a document</div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-
 def render_chat_page(topic=None):
     _ensure_state()
     _inject_chat_css()
@@ -426,9 +409,6 @@ def render_chat_page(topic=None):
     )
 
     chat = _active_chat()
-    if not chat["messages"]:
-        _render_empty_state()
-
     for message in chat["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -445,9 +425,19 @@ def render_chat_page(topic=None):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            reply, model_message = _generate_reply(prompt, chat)
-        st.markdown(reply)
+        thinking = st.empty()
+        thinking.markdown(
+            """
+<div class="kuki-thinking">
+  <span class="kuki-thinking-orb"></span>
+  <span>Thinking</span>
+  <span class="kuki-thinking-dots"><span></span><span></span><span></span></span>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+        reply, model_message = _generate_reply(prompt, chat)
+        thinking.markdown(reply)
         if not ai_status.ready:
             st.caption(model_message)
 
