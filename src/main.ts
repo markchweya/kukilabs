@@ -48,18 +48,10 @@ const sendIcon = `
 </svg>
 `;
 
-const assistantIcon = `
-<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <path d="M12 3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <rect x="5" y="7" width="14" height="12" rx="4" stroke="currentColor" stroke-width="2"/>
-  <path d="M9 12h.01M15 12h.01M9.5 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg>
-`;
-
-const userIcon = `
-<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
-  <path d="M5 21a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+const sidebarIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <rect x="3.5" y="4" width="17" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/>
+  <path d="M9 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -67,6 +59,7 @@ let chats: Chat[] = [newChat()];
 let activeChatId = chats[0].id;
 let aiReady = false;
 let aiMessage = "Checking AI...";
+let sidebarCollapsed = false;
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) {
@@ -111,27 +104,41 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
-function renderMarkdownLite(value: string): string {
-  const escaped = escapeHtml(value);
-  return escaped
-    .replace(/^### (.*)$/gm, "<strong>$1</strong>")
-    .replace(/^## (.*)$/gm, "<strong>$1</strong>")
-    .replace(/^# (.*)$/gm, "<strong>$1</strong>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+function stripDecorativeMarkdown(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .trim();
+}
+
+function renderInlineText(value: string): string {
+  return escapeHtml(stripDecorativeMarkdown(value)).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderMessageText(value: string): string {
+  const normalized = value
+    .trim();
+  const parts = normalized.split(/```([\s\S]*?)```/g);
+  return parts
+    .map((part, index) => {
+      if (index % 2 === 1) {
+        return `<pre><code>${escapeHtml(part.trim())}</code></pre>`;
+      }
+      return renderInlineText(part);
+    })
+    .join("");
 }
 
 function render(): void {
   const chat = activeChat();
   const messages = chat.messages
     .map((message) => {
-      const avatar = message.role === "assistant" ? assistantIcon : userIcon;
       const content = message.pending
-        ? `<div class="thinking"><span class="thinking-orb"></span><span>Thinking</span><span class="thinking-dots"><span></span><span></span><span></span></span></div>`
-        : renderMarkdownLite(message.content);
+        ? `<div class="thinking" aria-label="Kuki is thinking"><span class="thinking-mark">${logoSvg}</span></div>`
+        : renderMessageText(message.content);
 
       return `
         <div class="message-row ${message.role}">
-          <div class="avatar">${avatar}</div>
           <div class="bubble">${content}</div>
         </div>
       `;
@@ -149,11 +156,14 @@ function render(): void {
     .join("");
 
   root.innerHTML = `
-    <div class="app">
+    <div class="app ${sidebarCollapsed ? "sidebar-collapsed" : ""}">
       <aside class="sidebar">
-        <section>
-          <h1 class="sidebar-title">Kuki</h1>
-          <button class="new-chat-button" data-new-chat type="button">${editIcon}<span>New chat</span></button>
+        <section class="sidebar-top">
+          <div class="sidebar-head">
+            <h1 class="sidebar-title">Kuki</h1>
+            <button class="sidebar-toggle" data-toggle-sidebar type="button" aria-label="${sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}">${sidebarIcon}</button>
+          </div>
+          <button class="new-chat-button" data-new-chat type="button" aria-label="New chat">${editIcon}<span>New chat</span></button>
         </section>
         <section class="sidebar-section">
           <h2 class="sidebar-heading">History</h2>
@@ -193,6 +203,13 @@ function bindEvents(): void {
       const chat = newChat();
       chats.unshift(chat);
       activeChatId = chat.id;
+      render();
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-toggle-sidebar]").forEach((button) => {
+    button.addEventListener("click", () => {
+      sidebarCollapsed = !sidebarCollapsed;
       render();
     });
   });
@@ -283,7 +300,7 @@ async function sendMessage(prompt: string): Promise<void> {
           {
             role: "system",
             content:
-              "You are Kuki, a polished AI assistant for focused study, research, and everyday work. Be useful, direct, warm, and concise. Output Markdown only.",
+              "You are Kuki, the user's study pal. Sound warm, clear, and natural, like a helpful friend who is good at studying, research, and everyday tasks. Do not introduce yourself unless asked. Do not start replies with titles, greetings, or headings. Avoid Markdown headings and bold opening lines. Keep answers direct and easy to read.",
           },
           ...chat.messages
             .filter((message) => !message.pending)
