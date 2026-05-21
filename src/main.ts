@@ -95,6 +95,30 @@ function shortTitle(text: string): string {
   return cleaned.length > 36 ? `${cleaned.slice(0, 36).trim()}...` : cleaned || "New chat";
 }
 
+function isEmptyChat(chat: Chat): boolean {
+  return chat.messages.length === 0;
+}
+
+function startNewChat(): void {
+  const current = activeChat();
+  if (isEmptyChat(current)) {
+    render();
+    return;
+  }
+
+  const existingDraft = chats.find(isEmptyChat);
+  if (existingDraft) {
+    activeChatId = existingDraft.id;
+    render();
+    return;
+  }
+
+  const chat = newChat();
+  chats.unshift(chat);
+  activeChatId = chat.id;
+  render();
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -146,6 +170,7 @@ function render(): void {
     .join("");
 
   const history = chats
+    .filter((item) => !isEmptyChat(item))
     .map(
       (item) => `
         <button class="history-button" data-chat-id="${item.id}" type="button">
@@ -197,20 +222,23 @@ function render(): void {
   scrollToBottom();
 }
 
+function applySidebarState(): void {
+  const appShell = document.querySelector<HTMLElement>(".app");
+  const toggle = document.querySelector<HTMLButtonElement>("[data-toggle-sidebar]");
+
+  appShell?.classList.toggle("sidebar-collapsed", sidebarCollapsed);
+  toggle?.setAttribute("aria-label", sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
+}
+
 function bindEvents(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-new-chat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const chat = newChat();
-      chats.unshift(chat);
-      activeChatId = chat.id;
-      render();
-    });
+    button.addEventListener("click", startNewChat);
   });
 
   document.querySelectorAll<HTMLButtonElement>("[data-toggle-sidebar]").forEach((button) => {
     button.addEventListener("click", () => {
       sidebarCollapsed = !sidebarCollapsed;
-      render();
+      applySidebarState();
     });
   });
 

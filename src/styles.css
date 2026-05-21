@@ -58,7 +58,8 @@ button {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   background: #f7f7f5;
-  transition: grid-template-columns 180ms ease;
+  transition: grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: grid-template-columns;
 }
 
 .app.sidebar-collapsed {
@@ -74,6 +75,9 @@ button {
   gap: 24px;
   min-height: 100vh;
   overflow: hidden;
+  transition:
+    padding 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 260ms ease;
 }
 
 .sidebar-head {
@@ -88,11 +92,23 @@ button {
   margin: 0;
   font-size: 1rem;
   font-weight: 760;
+  white-space: nowrap;
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar-section {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-top: 22px;
+  max-height: 360px;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    padding-top 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease;
 }
 
 .sidebar-heading {
@@ -115,6 +131,11 @@ button {
   color: #f8f8f8;
   padding: 10px 12px;
   text-align: left;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .history-button {
@@ -126,6 +147,17 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.new-chat-button span {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .new-chat-button:hover,
@@ -143,6 +175,10 @@ button {
   display: grid;
   place-items: center;
   padding: 0;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar-toggle:hover {
@@ -160,9 +196,26 @@ button {
 }
 
 .sidebar-collapsed .sidebar-title,
-.sidebar-collapsed .sidebar-section,
 .sidebar-collapsed .new-chat-button span {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  max-width: 0;
+}
+
+.sidebar-collapsed .sidebar-section {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.sidebar-collapsed .sidebar-title {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
 }
 
 .sidebar-collapsed .new-chat-button {
@@ -247,6 +300,7 @@ button {
 .message-row {
   display: flex;
   margin: 18px 0;
+  animation: message-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .bubble {
@@ -258,6 +312,9 @@ button {
   line-height: 1.58;
   box-shadow: none;
   white-space: pre-wrap;
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .message-row.assistant {
@@ -380,6 +437,27 @@ button {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }
 
