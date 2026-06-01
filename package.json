@@ -12,8 +12,8 @@
     "legacy:install": "powershell -NoProfile -ExecutionPolicy Bypass -File ./run_kuki.ps1 -Install"
   },
   "dependencies": {
-    "vite": "^7.3.0",
-    "typescript": "^5.9.3"
-  },
-  "devDependencies": {}
+    "@supabase/supabase-js": "^2.106.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
+  }
 }

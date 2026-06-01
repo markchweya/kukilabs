@@ -1,4 +1,5 @@
 import "./styles.css";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 type Role = "user" | "assistant";
 
@@ -25,6 +26,11 @@ type Attachment = {
 };
 
 const MODEL = "llama3.2:3b";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const authConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+type AuthMode = "login" | "signup";
 
 const logoSvg = `
 <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
@@ -76,6 +82,10 @@ let aiReady = false;
 let aiMessage = "Checking AI...";
 let sidebarCollapsed = false;
 let selectedAttachments: Attachment[] = [];
+let authModalMode: AuthMode | null = null;
+let authMessage = authConfigured ? "" : "Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local to enable accounts.";
+let authUser: User | null = null;
+let supabaseClient: SupabaseClient | null = null;
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) {
@@ -85,6 +95,12 @@ const root = app;
 
 function newId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function supabase(): SupabaseClient | null {
+  if (!authConfigured || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  supabaseClient ??= createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabaseClient;
 }
 
 function newChat(): Chat {
@@ -203,6 +219,64 @@ function selectedAttachmentContext(): string {
     .join("\n\n");
 }
 
+function authTitle(mode: AuthMode): string {
+  return mode === "signup" ? "Create account" : "Log in";
+}
+
+function renderAuthActions(): string {
+  if (authUser) {
+    return `
+      <div class="auth-actions signed-in">
+        <span class="account-pill">${escapeHtml(authUser.email ?? "Signed in")}</span>
+        <button class="auth-link" type="button" data-auth-signout>Sign out</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="auth-actions">
+      <button class="auth-link" type="button" data-auth-open="login">Log in</button>
+      <button class="auth-primary" type="button" data-auth-open="signup">Sign up</button>
+    </div>
+  `;
+}
+
+function renderAuthModal(): string {
+  if (!authModalMode) return "";
+  const title = authTitle(authModalMode);
+  const alternateMode: AuthMode = authModalMode === "signup" ? "login" : "signup";
+  const alternateText = authModalMode === "signup" ? "Log in instead" : "Create account instead";
+
+  return `
+    <div class="modal-backdrop" data-auth-close>
+      <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="auth-modal-head">
+          <h2 id="auth-title">${title}</h2>
+          <button class="modal-close" type="button" data-auth-close aria-label="Close">&times;</button>
+        </div>
+        <form class="auth-form" data-auth-form>
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" name="password" autocomplete="${authModalMode === "signup" ? "new-password" : "current-password"}" required minlength="6" />
+          </label>
+          <button class="auth-submit" type="submit" ${authConfigured ? "" : "disabled"}>${title}</button>
+        </form>
+        <div class="auth-divider"><span>or</span></div>
+        <button class="google-button" type="button" data-google-auth ${authConfigured ? "" : "disabled"}>
+          <span class="google-mark" aria-hidden="true">G</span>
+          <span>Continue with Google</span>
+        </button>
+        ${authMessage ? `<p class="auth-message">${escapeHtml(authMessage)}</p>` : ""}
+        <button class="auth-switch" type="button" data-auth-open="${alternateMode}">${alternateText}</button>
+      </section>
+    </div>
+  `;
+}
+
 function render(): void {
   const chat = activeChat();
   const messages = chat.messages
@@ -251,7 +325,10 @@ function render(): void {
             <div class="logo">${logoSvg}</div>
             <div class="brand-name">Kuki</div>
           </div>
-          <button class="top-new-chat" data-new-chat type="button">${editIcon}<span>New chat</span></button>
+          <div class="topbar-actions">
+            <button class="top-new-chat" data-new-chat type="button">${editIcon}<span>New chat</span></button>
+            ${renderAuthActions()}
+          </div>
         </header>
         <section class="messages" data-messages>
           <div class="messages-inner">
@@ -280,6 +357,7 @@ function render(): void {
           </form>
         </footer>
       </main>
+      ${renderAuthModal()}
     </div>
   `;
 
@@ -314,6 +392,38 @@ function bindEvents(): void {
       activeChatId = id;
       render();
     });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-auth-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      authModalMode = button.dataset.authOpen === "signup" ? "signup" : "login";
+      authMessage = authConfigured ? "" : "Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local to enable accounts.";
+      render();
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-auth-close]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      if (event.target !== element && !(event.target instanceof HTMLButtonElement)) return;
+      authModalMode = null;
+      render();
+    });
+  });
+
+  document.querySelector<HTMLFormElement>("[data-auth-form]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+    void submitAuth(email, password);
+  });
+
+  document.querySelector<HTMLButtonElement>("[data-google-auth]")?.addEventListener("click", () => {
+    void signInWithGoogle();
+  });
+
+  document.querySelector<HTMLButtonElement>("[data-auth-signout]")?.addEventListener("click", () => {
+    void signOut();
   });
 
   const form = document.querySelector<HTMLFormElement>("[data-composer]");
@@ -373,7 +483,77 @@ function bindEvents(): void {
   });
 
   updateSend();
-  input.focus();
+  if (!authModalMode) input.focus();
+}
+
+async function submitAuth(email: string, password: string): Promise<void> {
+  const client = supabase();
+  if (!client || !authModalMode) {
+    authMessage = "Auth is not configured yet. Add your Supabase URL and anon key, then restart the app.";
+    render();
+    return;
+  }
+
+  const result =
+    authModalMode === "signup"
+      ? await client.auth.signUp({ email, password })
+      : await client.auth.signInWithPassword({ email, password });
+
+  if (result.error) {
+    authMessage = result.error.message;
+    render();
+    return;
+  }
+
+  authUser = result.data.user;
+  authMessage = authModalMode === "signup" && !result.data.session
+    ? "Check your email to confirm your account."
+    : "";
+  authModalMode = result.data.session ? null : authModalMode;
+  render();
+}
+
+async function signInWithGoogle(): Promise<void> {
+  const client = supabase();
+  if (!client) {
+    authMessage = "Auth is not configured yet. Add your Supabase URL and anon key, then restart the app.";
+    render();
+    return;
+  }
+
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin },
+  });
+
+  if (error) {
+    authMessage = error.message;
+    render();
+  }
+}
+
+async function signOut(): Promise<void> {
+  const client = supabase();
+  if (client) {
+    await client.auth.signOut();
+  }
+  authUser = null;
+  authMessage = "";
+  render();
+}
+
+async function initializeAuth(): Promise<void> {
+  const client = supabase();
+  if (!client) return;
+
+  const { data } = await client.auth.getSession();
+  authUser = data.session?.user ?? null;
+  client.auth.onAuthStateChange((_event, session) => {
+    authUser = session?.user ?? null;
+    authModalMode = null;
+    render();
+  });
+  render();
 }
 
 function readAttachment(file: File): Promise<Attachment> {
@@ -490,4 +670,5 @@ function installFavicon(): void {
 
 installFavicon();
 render();
+void initializeAuth();
 void checkAi();

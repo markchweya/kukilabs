@@ -45,6 +45,7 @@ body {
 }
 
 button,
+input,
 textarea {
   font: inherit;
 }
@@ -246,6 +247,12 @@ button {
   padding: 26px 42px 14px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -283,6 +290,237 @@ button {
 }
 
 .top-new-chat:hover {
+  color: #111;
+}
+
+.auth-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-actions.signed-in {
+  gap: 10px;
+}
+
+.auth-link,
+.auth-primary {
+  min-height: 36px;
+  border-radius: 8px;
+  font-weight: 680;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.auth-link {
+  border: 0;
+  background: transparent;
+  color: #343434;
+  padding: 8px 4px;
+}
+
+.auth-link:hover {
+  color: #111;
+}
+
+.auth-primary {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 8px 14px;
+}
+
+.auth-primary:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.account-pill {
+  max-width: 220px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #deded9;
+  border-radius: 8px;
+  background: #fff;
+  color: #242422;
+  padding: 7px 10px;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(17, 17, 17, 0.24);
+  padding: 20px;
+}
+
+.auth-modal {
+  width: min(420px, 100%);
+  border: 1px solid #d8d8d4;
+  border-radius: 8px;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.auth-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.auth-modal h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.modal-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #53534f;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: #f0f0ed;
+  color: #111;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: #31312f;
+  font-weight: 650;
+  font-size: 0.9rem;
+}
+
+.auth-form input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #d8d8d4;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1f1f;
+  outline: 0;
+  padding: 0 12px;
+}
+
+.auth-form input:focus {
+  border-color: #111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+}
+
+.auth-submit,
+.google-button {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 8px;
+  font-weight: 720;
+}
+
+.auth-submit {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  margin-top: 4px;
+}
+
+.auth-submit:disabled,
+.google-button:disabled {
+  border-color: #ececea;
+  background: #ececea;
+  color: #9b9b96;
+  cursor: default;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin: 16px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #e3e3df;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #d8d8d4;
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.google-button:not(:disabled):hover {
+  background: #f7f7f5;
+}
+
+.google-mark {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #d8d8d4;
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.auth-message {
+  margin: 14px 0 0;
+  color: #6a4d0c;
+  background: #fff7df;
+  border: 1px solid #f1dfaa;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.auth-switch {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #343434;
+  font-weight: 680;
+  margin-top: 14px;
+  padding: 8px;
+}
+
+.auth-switch:hover {
   color: #111;
 }
 
@@ -572,6 +810,10 @@ button {
     padding: 20px 18px 10px;
   }
 
+  .topbar-actions {
+    gap: 10px;
+  }
+
   .messages {
     padding: 4px 18px 18px;
   }
@@ -600,5 +842,23 @@ button {
   .top-new-chat .icon {
     width: 21px;
     height: 21px;
+  }
+
+  .auth-actions {
+    gap: 6px;
+  }
+
+  .auth-link,
+  .auth-primary {
+    min-height: 34px;
+    font-size: 0.88rem;
+  }
+
+  .auth-primary {
+    padding-inline: 10px;
+  }
+
+  .account-pill {
+    max-width: 118px;
   }
 }
