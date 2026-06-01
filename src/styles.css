@@ -511,6 +511,26 @@ button {
   min-height: 42vh;
 }
 
+.main.empty-chat .messages {
+  flex: 0;
+  min-height: 0;
+  padding: 0 42px;
+}
+
+.main.empty-chat .empty-space {
+  min-height: 0;
+}
+
+.main.empty-chat .composer-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.main.empty-chat .composer {
+  margin: 0 auto;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -561,6 +581,14 @@ button {
   }
 
   .composer-wrap {
+    padding: 12px 14px 18px;
+  }
+
+  .main.empty-chat .messages {
+    padding-inline: 18px;
+  }
+
+  .main.empty-chat .composer-wrap {
     padding: 12px 14px 18px;
   }
 

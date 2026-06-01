@@ -245,7 +245,7 @@ function render(): void {
           ${history}
         </section>
       </aside>
-      <main class="main">
+      <main class="main ${isEmptyChat(chat) ? "empty-chat" : ""}">
         <header class="topbar">
           <div class="brand">
             <div class="logo">${logoSvg}</div>
