@@ -7,12 +7,21 @@ type Message = {
   role: Role;
   content: string;
   pending?: boolean;
+  attachments?: Attachment[];
 };
 
 type Chat = {
   id: string;
   title: string;
   messages: Message[];
+};
+
+type Attachment = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  content: string;
 };
 
 const MODEL = "llama3.2:3b";
@@ -48,6 +57,12 @@ const sendIcon = `
 </svg>
 `;
 
+const plusIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>
+`;
+
 const sidebarIcon = `
 <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
   <rect x="3.5" y="4" width="17" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/>
@@ -60,6 +75,7 @@ let activeChatId = chats[0].id;
 let aiReady = false;
 let aiMessage = "Checking AI...";
 let sidebarCollapsed = false;
+let selectedAttachments: Attachment[] = [];
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) {
@@ -153,6 +169,40 @@ function renderMessageText(value: string): string {
     .join("");
 }
 
+function formatFileSize(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderAttachments(attachments: Attachment[] = []): string {
+  if (!attachments.length) return "";
+  return `
+    <div class="message-files" aria-label="Attached files">
+      ${attachments
+        .map(
+          (file) => `
+            <span class="message-file">
+              <span class="file-name">${escapeHtml(file.name)}</span>
+              <span class="file-size">${formatFileSize(file.size)}</span>
+            </span>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function selectedAttachmentContext(): string {
+  if (!selectedAttachments.length) return "";
+  return selectedAttachments
+    .map((file) => {
+      const text = file.content.trim() || "No readable text was extracted in the browser.";
+      return `File: ${file.name}\nType: ${file.type || "unknown"}\nContent:\n${text.slice(0, 12000)}`;
+    })
+    .join("\n\n");
+}
+
 function render(): void {
   const chat = activeChat();
   const messages = chat.messages
@@ -163,7 +213,7 @@ function render(): void {
 
       return `
         <div class="message-row ${message.role}">
-          <div class="bubble">${content}</div>
+          <div class="bubble">${renderAttachments(message.attachments)}${content}</div>
         </div>
       `;
     })
@@ -210,6 +260,21 @@ function render(): void {
         </section>
         <footer class="composer-wrap">
           <form class="composer" data-composer>
+            <div class="attachment-tray" data-attachment-tray ${selectedAttachments.length ? "" : "hidden"}>
+              ${selectedAttachments
+                .map(
+                  (file) => `
+                    <span class="attachment-chip">
+                      <span class="file-name">${escapeHtml(file.name)}</span>
+                      <span class="file-size">${formatFileSize(file.size)}</span>
+                      <button class="remove-attachment" type="button" data-remove-attachment="${file.id}" aria-label="Remove ${escapeHtml(file.name)}">&times;</button>
+                    </span>
+                  `,
+                )
+                .join("")}
+            </div>
+            <input class="file-input" type="file" data-file-input multiple hidden />
+            <button class="attach-button" type="button" data-attach aria-label="Upload files" title="Upload files">${plusIcon}</button>
             <textarea aria-label="Message Kuki" placeholder="Message Kuki" rows="1" data-input></textarea>
             <button class="send-button" type="submit" data-send disabled>${sendIcon}</button>
           </form>
@@ -254,11 +319,15 @@ function bindEvents(): void {
   const form = document.querySelector<HTMLFormElement>("[data-composer]");
   const input = document.querySelector<HTMLTextAreaElement>("[data-input]");
   const send = document.querySelector<HTMLButtonElement>("[data-send]");
+  const attach = document.querySelector<HTMLButtonElement>("[data-attach]");
+  const fileInput = document.querySelector<HTMLInputElement>("[data-file-input]");
 
   if (!form || !input || !send) return;
 
   const updateSend = () => {
-    send.disabled = input.value.trim().length === 0 || activeChat().messages.some((message) => message.pending);
+    send.disabled =
+      (input.value.trim().length === 0 && selectedAttachments.length === 0) ||
+      activeChat().messages.some((message) => message.pending);
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
   };
@@ -271,16 +340,61 @@ function bindEvents(): void {
     }
   });
 
+  attach?.addEventListener("click", () => {
+    fileInput?.click();
+  });
+
+  fileInput?.addEventListener("change", async () => {
+    const files = Array.from(fileInput.files ?? []);
+    const attachments = await Promise.all(files.map(readAttachment));
+    selectedAttachments = [...selectedAttachments, ...attachments];
+    fileInput.value = "";
+    render();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-remove-attachment]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.removeAttachment;
+      selectedAttachments = selectedAttachments.filter((file) => file.id !== id);
+      render();
+    });
+  });
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const prompt = input.value.trim();
-    if (!prompt) return;
+    if (!prompt && selectedAttachments.length === 0) return;
+    const attachments = selectedAttachments;
+    const context = selectedAttachmentContext();
+    const message = prompt || "Uploaded file(s).";
     input.value = "";
-    void sendMessage(prompt);
+    selectedAttachments = [];
+    void sendMessage(message, attachments, context);
   });
 
   updateSend();
   input.focus();
+}
+
+function readAttachment(file: File): Promise<Attachment> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    const fallback = {
+      id: newId("file"),
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      content: "",
+    };
+
+    reader.addEventListener("load", () => {
+      resolve({ ...fallback, content: String(reader.result ?? "") });
+    });
+    reader.addEventListener("error", () => {
+      resolve(fallback);
+    });
+    reader.readAsText(file);
+  });
 }
 
 function scrollToBottom(): void {
@@ -306,16 +420,21 @@ async function checkAi(): Promise<void> {
   render();
 }
 
-async function sendMessage(prompt: string): Promise<void> {
+async function sendMessage(prompt: string, attachments: Attachment[] = [], attachmentContext = ""): Promise<void> {
   const chat = activeChat();
   if (chat.messages.length === 0) {
     chat.title = shortTitle(prompt);
   }
 
-  chat.messages.push({ id: newId("msg"), role: "user", content: prompt });
+  const userMessageId = newId("msg");
+  chat.messages.push({ id: userMessageId, role: "user", content: prompt, attachments });
   const pendingId = newId("msg");
   chat.messages.push({ id: pendingId, role: "assistant", content: "", pending: true });
   render();
+
+  const userContent = attachmentContext
+    ? `Uploaded files:\n${attachmentContext}\n\nUser message:\n${prompt}`
+    : prompt;
 
   try {
     const response = await fetch("/api/chat", {
@@ -333,7 +452,10 @@ async function sendMessage(prompt: string): Promise<void> {
           ...chat.messages
             .filter((message) => !message.pending)
             .slice(-10)
-            .map((message) => ({ role: message.role, content: message.content })),
+            .map((message) => ({
+              role: message.role,
+              content: message.id === userMessageId ? userContent : message.content,
+            })),
         ],
         options: { temperature: 0.35, num_ctx: 4096 },
       }),
