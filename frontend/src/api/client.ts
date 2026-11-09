@@ -42,5 +42,6 @@ function messageFrom(data: unknown): string | null {
 export const http = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
+  patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
   del: (path: string) => request<void>("DELETE", path),
 };

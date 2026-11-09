@@ -78,7 +78,7 @@ function DocumentHeader({ doc, onChange }: { doc: KukiDocument; onChange: (d: Ku
         <KindIcon kind={doc.kind} className="h-7 w-7" />
       </span>
       <div className="min-w-0 flex-1">
-        <h1 className="text-3xl font-bold sm:text-4xl">{doc.title}</h1>
+        <EditableTitle doc={doc} onChange={onChange} />
         <p className="mt-1 text-ink-soft">
           {KIND_LABEL[doc.kind]}
           {doc.status === "ready" && `, ${partsLabel(doc.kind, doc.segment_count)}`}
@@ -102,5 +102,45 @@ function DocumentHeader({ doc, onChange }: { doc: KukiDocument; onChange: (d: Ku
         )}
       </div>
     </header>
+  );
+}
+
+/** Click the title to rename; Enter saves, Escape cancels. */
+function EditableTitle({ doc, onChange }: { doc: KukiDocument; onChange: (d: KukiDocument) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(doc.title);
+
+  async function save() {
+    setEditing(false);
+    if (value.trim() && value.trim() !== doc.title) {
+      onChange(await api.documents.rename(doc.id, value).catch(() => doc));
+    } else {
+      setValue(doc.title);
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        aria-label="Document title"
+        value={value}
+        maxLength={200}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => void save()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void save();
+          if (e.key === "Escape") { setValue(doc.title); setEditing(false); }
+        }}
+        className="w-full rounded-xl border border-whale bg-paper px-2 font-display text-3xl font-bold outline-none sm:text-4xl"
+      />
+    );
+  }
+  return (
+    <h1 className="text-3xl font-bold sm:text-4xl">
+      <button type="button" onClick={() => setEditing(true)} title="Rename" className="text-left hover:underline hover:decoration-stitch hover:decoration-dashed">
+        {doc.title}
+      </button>
+    </h1>
   );
 }
