@@ -45,3 +45,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# Kuki 2.0 runtime data (user libraries live in ~/.kuki by default)
+.kuki/
+backend/.pytest_cache/
+frontend/node_modules/
+frontend/dist/
