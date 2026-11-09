@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
 
-from kuki.api.deps import get_library, get_llm
+from kuki.api.deps import ensure_ready, get_library, get_llm
 from kuki.library import Library, NotFound
 from kuki.llm import OllamaClient
 from kuki.study.pack_models import StudyPack
@@ -18,12 +18,6 @@ router = APIRouter(prefix="/api/documents/{doc_id}/pack", tags=["study"])
 
 class PackRequest(BaseModel):
     knowledge: Literal["notes_only", "fill_gaps"] = "notes_only"
-
-
-def _ensure_ready(library: Library, doc_id: str) -> None:
-    doc = library.get_document(doc_id)
-    if doc.status != "ready":
-        raise ValueError("This document is still being read. Try again in a moment." if doc.status == "processing" else doc.error or "This document could not be read.")
 
 
 @router.get("", response_model=StudyPack)
@@ -43,7 +37,7 @@ def create_pack(
     llm: OllamaClient = Depends(get_llm),
 ) -> StudyPack:
     """Generate (or regenerate) a study pack. Can take a minute on a CPU."""
-    _ensure_ready(library, doc_id)
+    ensure_ready(library, doc_id)
     return generate_pack(library, llm, doc_id, (body or PackRequest()).knowledge)
 
 

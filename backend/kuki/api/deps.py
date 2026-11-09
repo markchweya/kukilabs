@@ -36,3 +36,12 @@ def get_library(request: Request) -> Iterator[Library]:
         yield library
     finally:
         library.conn.close()
+
+
+def ensure_ready(library: Library, doc_id: str) -> None:
+    """Raise a friendly error unless the document has been read successfully."""
+    doc = library.get_document(doc_id)
+    if doc.status == "processing":
+        raise ValueError("This document is still being read. Try again in a moment.")
+    if doc.status != "ready":
+        raise ValueError(doc.error or "This document could not be read.")
