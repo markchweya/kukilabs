@@ -128,6 +128,8 @@ def list_questions(library: Library, doc_id: str) -> list[Question]:
 # ---- grading ---------------------------------------------------------------
 
 MAX_ANSWER_CHARS = 4000
+# Enough for eight claim checks plus feedback; stops a runaway generation.
+GRADE_TOKEN_BUDGET = 700
 
 
 def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: str) -> Grade:
@@ -156,6 +158,8 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
             GradeDraft,
             temperature=0.1,  # grading should be consistent, not creative
             num_ctx=library.settings.num_ctx,
+            schema=GradeDraft.schema_for(len(claims), len(key_ideas)),
+            num_predict=GRADE_TOKEN_BUDGET,
         )
         result = aggregate_grade(draft, claims, key_ideas)
         mode = "ai"

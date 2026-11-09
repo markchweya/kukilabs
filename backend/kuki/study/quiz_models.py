@@ -43,7 +43,7 @@ class ClaimCheck(BaseModel):
         description="supported: the lecture says the same thing, even in other words. "
         "contradicted: the lecture says something different. not_in_notes: the lecture doesn't cover it"
     )
-    correction: str = Field(description="If contradicted: what the lecture actually says. Otherwise empty")
+    correction: str = Field(max_length=300, description="If contradicted: what the lecture actually says. Otherwise empty")
 
 
 class GradeDraft(BaseModel):
@@ -59,8 +59,21 @@ class GradeDraft(BaseModel):
     checks: list[ClaimCheck] = Field(description="One check per numbered claim, in the same order")
     missing_ideas: list[str] = Field(description="Key ideas from the list that the answer does not cover, copied exactly")
     misconception_type: MisconceptionType
-    nudge: str = Field(description="One guiding question that helps the student find the fix themselves")
-    explanation: str = Field(description="A short correct explanation using only the lecture sources")
+    nudge: str = Field(max_length=250, description="One guiding question that helps the student find the fix themselves")
+    explanation: str = Field(max_length=600, description="A short correct explanation using only the lecture sources")
+
+    @classmethod
+    def schema_for(cls, claims: int, key_ideas: int) -> dict:
+        """JSON schema with exactly one check per claim and at most one entry per key idea.
+
+        Without these bounds a real 3B model kept appending items until the
+        request timed out.
+        """
+        schema = cls.model_json_schema()
+        props = schema["properties"]
+        props["checks"].update(minItems=claims, maxItems=claims)
+        props["missing_ideas"].update(maxItems=key_ideas)
+        return schema
 
 
 class GradeResult(BaseModel):

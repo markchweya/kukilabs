@@ -171,3 +171,17 @@ def test_fewer_checks_than_claims_and_empty_answers():
 def test_tidy_correction():
     assert tidy_correction("None") == ""
     assert tidy_correction("A. B. C. (Lecture Source: Slide 4)") == "A. B."
+
+
+def test_grade_schema_is_sized_to_the_answer(setup):
+    library, fake, llm, doc_id = setup
+    fake.respond("QuizDraft", QUIZ)
+    q = generate_quiz(library, llm, doc_id)[0]
+    fake.respond("GradeDraft", {"checks": [{"status": "supported", "correction": ""}] * 2, "missing_ideas": [],
+                                "misconception_type": "none", "nudge": "", "explanation": "E."})
+    grade_answer(library, llm, q.id, "BFS uses a FIFO queue. DFS uses a stack and goes deep first.")
+    _, body = fake.requests[-1]
+    checks = body["format"]["properties"]["checks"]
+    assert (checks["minItems"], checks["maxItems"]) == (2, 2)
+    assert body["format"]["properties"]["missing_ideas"]["maxItems"] == 2
+    assert body["options"]["num_predict"] == 700
