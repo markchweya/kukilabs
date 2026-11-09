@@ -197,8 +197,7 @@ def _confirm_contradictions(
 
     In real testing the 3B grader told a student "BFS uses a queue, not a
     FIFO queue". A focused second check, quote first, catches such false
-    alarms. An unconfirmed contradiction becomes "not in notes", so it is
-    neither praised nor reported as a misconception.
+    alarms. If the lecture agrees with the claim, it counts as supported.
     """
     checks = list(draft.checks)
     flagged = [i for i, c in enumerate(checks[: len(claims)]) if c.status == "contradicted"][:MAX_VERIFICATIONS]
@@ -215,12 +214,14 @@ def _confirm_contradictions(
         except OllamaError:
             continue  # keep the grader's judgement if the check can't run
         if verdict.agrees:
-            checks[i] = ClaimCheck(status="not_in_notes", correction="")
+            checks[i] = ClaimCheck(status="supported", correction="")
     return draft.model_copy(update={"checks": checks})
 
 
 # Each contradicted claim costs this many points on top of missing key ideas.
 CONTRADICTION_PENALTY = 30
+# Highest score possible when none of the student's claims is supported.
+NOTHING_RIGHT_CAP = 30
 
 
 def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) -> GradeResult:
@@ -250,6 +251,10 @@ def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) 
     score = round(100 * coverage) - CONTRADICTION_PENALTY * len(contradicted)
     if not claims:
         score = 0
+    elif not supported:
+        # Coverage relies on the model's list of missing ideas, which a small
+        # model under-reports; nothing correct can't score well.
+        score = min(score, NOTHING_RIGHT_CAP)
     score = max(0, min(100, score))
 
     if contradicted:

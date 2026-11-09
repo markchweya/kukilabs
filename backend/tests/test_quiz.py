@@ -200,6 +200,7 @@ def test_unconfirmed_contradiction_is_not_reported(setup):
     fake.respond("AgreementCheck", {"lecture_quote": "BFS explores level by level using a FIFO queue.", "agrees": True})
     grade = grade_answer(library, llm, q.id, "BFS uses a FIFO queue. DFS uses a stack and goes deep first.")
     assert grade.misconception == "" and grade.verdict == "correct"
+    assert grade.got_right == ["BFS uses a FIFO queue", "DFS uses a stack and goes deep first"]
 
 
 def test_confirmed_contradiction_is_reported(setup):
@@ -213,3 +214,10 @@ def test_confirmed_contradiction_is_reported(setup):
     fake.respond("AgreementCheck", {"lecture_quote": "DFS goes deep first using a stack.", "agrees": False})
     grade = grade_answer(library, llm, q.id, "DFS uses a queue.")
     assert grade.misconception.startswith("You said “DFS uses a queue”")
+
+
+def test_nothing_right_caps_the_score():
+    # Real run: an answer with no correct claim scored 75 because the model
+    # reported only one missing idea.
+    result = aggregate_grade(draft([("not_in_notes", ""), ("not_in_notes", "")], missing=[KEY_IDEAS[0]]), ["a b c", "d e f"], KEY_IDEAS)
+    assert (result.verdict, result.score) == ("incorrect", 30)
