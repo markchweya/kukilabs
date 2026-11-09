@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from kuki.api.deps import get_library, get_llm, get_settings, open_library
@@ -31,10 +32,12 @@ class DocumentOut(BaseModel):
     created_at: str
     segment_count: int
     audio_url: str | None = None
+    has_local_audio: bool = False
 
     @classmethod
-    def of(cls, doc: Document) -> "DocumentOut":
-        return cls(**doc.__dict__)
+    def of(cls, doc: Document, library: Library | None = None) -> "DocumentOut":
+        local = library is not None and library.local_audio_path(doc.id).exists()
+        return cls(**doc.__dict__, has_local_audio=local)
 
 
 class SegmentOut(BaseModel):
@@ -92,7 +95,7 @@ def upload(
             out.write(chunk)
 
     background.add_task(process_document, settings, llm, doc_id, dest)
-    return DocumentOut.of(library.get_document(doc_id))
+    return DocumentOut.of(library.get_document(doc_id), library)
 
 
 @router.get("", response_model=list[DocumentOut])
@@ -102,12 +105,34 @@ def list_documents(library: Library = Depends(get_library)) -> list[DocumentOut]
 
 @router.get("/{doc_id}", response_model=DocumentOut)
 def get_document(doc_id: str, library: Library = Depends(get_library)) -> DocumentOut:
-    return DocumentOut.of(library.get_document(doc_id))
+    return DocumentOut.of(library.get_document(doc_id), library)
 
 
 @router.get("/{doc_id}/segments", response_model=list[SegmentOut])
 def get_segments(doc_id: str, library: Library = Depends(get_library)) -> list[SegmentOut]:
     return [SegmentOut(**dict(r)) for r in library.segments(doc_id)]
+
+
+@router.post("/{doc_id}/audio", response_model=DocumentOut)
+def save_recording(doc_id: str, library: Library = Depends(get_library)) -> DocumentOut:
+    """Download an imported lecture's recording so it plays without internet."""
+    from kuki.openlib.importer import ImportFailed, save_audio
+
+    try:
+        save_audio(library, doc_id)
+    except ImportFailed as exc:
+        raise HTTPException(502 if "download" in str(exc).lower() else 422, str(exc)) from exc
+    return DocumentOut.of(library.get_document(doc_id), library)
+
+
+@router.get("/{doc_id}/audio")
+def play_recording(doc_id: str, library: Library = Depends(get_library)) -> FileResponse:
+    """Serve the saved recording (supports seeking via HTTP range requests)."""
+    library.get_document(doc_id)
+    path = library.local_audio_path(doc_id)
+    if not path.exists():
+        raise HTTPException(404, "This recording hasn't been saved for offline use.")
+    return FileResponse(path, media_type="audio/mpeg")
 
 
 @router.delete("/{doc_id}", status_code=204)

@@ -57,3 +57,24 @@ def test_nice_titles():
 
     assert nice_title("week-4_search_algorithms (1).pptx") == "Week 4 search algorithms"
     assert nice_title("___.pdf") == "Untitled"
+
+
+def test_offline_recording_endpoints(settings, monkeypatch):
+    from kuki.openlib import importer
+
+    client, _ = make_client(settings)
+    doc = upload_notes(client)
+    assert client.get(f"/api/documents/{doc['id']}/audio").status_code == 404
+    assert client.post(f"/api/documents/{doc['id']}/audio").status_code == 422  # no recording
+
+    def fake_save(library, doc_id, http=None):
+        path = library.local_audio_path(doc_id)
+        path.write_bytes(b"ID3data")
+        return path
+
+    monkeypatch.setattr(importer, "save_audio", fake_save)
+    saved = client.post(f"/api/documents/{doc['id']}/audio").json()
+    assert saved["has_local_audio"] is True
+    res = client.get(f"/api/documents/{doc['id']}/audio")
+    assert res.status_code == 200 and res.content == b"ID3data"
+    assert res.headers["content-type"] == "audio/mpeg"
