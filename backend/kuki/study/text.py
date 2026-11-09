@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import re
 
-_PAIRS = {'"': '"', "'": "'", "“": "”", "‘": "’"}
+# Only double quotes: single quotes double as apostrophes ("we'll", "it’s"),
+# so treating them as quotes stripped them out of real model output.
+_PAIRS = {'"': '"', "“": "”"}
 
 
 def clean(text: str) -> str:
