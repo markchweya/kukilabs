@@ -82,3 +82,12 @@ def test_long_documents_are_batched(setup, settings):
     generate_pack(library, llm, doc_id)
     pack_calls = [b for path, b in fake.requests if path == "/api/chat" and b["format"]["title"] == "StudyPackDraft"]
     assert len(pack_calls) > 1
+
+
+def test_model_strings_are_cleaned(setup):
+    library, fake, llm, doc_id = setup
+    fake.respond("StudyPackDraft", {**DRAFT, "concepts": [{"term": 'A"* ', "explanation": "f = g + h .", "sources": ["S2"]}]})
+    fake.respond("PackSummaryDraft", {"title": '"Search"', "overview": "O"})
+    pack = generate_pack(library, llm, doc_id)
+    assert pack.concepts[0].term == "A*" and pack.concepts[0].explanation == "f = g + h."
+    assert pack.title == "Search"
