@@ -1,0 +1,107 @@
+// One document's workspace: study pack, quiz, flashcards, ask, and the
+// original text, as tabs that live in the URL (/doc/:id/:tab).
+import { useState } from "react";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
+import { api, type KukiDocument } from "../api";
+import { KindIcon } from "../components/KindIcon";
+import { Button, ErrorNote, Working } from "../components/ui";
+import { KIND_LABEL, partsLabel } from "../lib/format";
+import { useResource } from "../lib/useResource";
+
+const TABS = [
+  { id: "pack", label: "Study pack" },
+  { id: "quiz", label: "Quiz me" },
+  { id: "cards", label: "Flashcards" },
+  { id: "ask", label: "Ask" },
+  { id: "source", label: "Original" },
+] as const;
+
+export type TabId = (typeof TABS)[number]["id"];
+
+const poll = (doc?: KukiDocument) => (doc?.status === "processing" ? 1500 : null);
+
+export default function DocumentPage({ panels }: { panels: Record<TabId, (doc: KukiDocument) => React.ReactNode> }) {
+  const { id = "", tab = "pack" } = useParams();
+  const doc = useResource(() => api.documents.get(id), [id], poll);
+  const active = (TABS.some((t) => t.id === tab) ? tab : "pack") as TabId;
+
+  if (doc.error) return <ErrorNote message={doc.error} onRetry={doc.reload} />;
+  if (!doc.data) return null;
+  const d = doc.data;
+
+  return (
+    <div className="space-y-6">
+      <DocumentHeader doc={d} />
+      {d.status === "processing" && <Working label="Reading your document…" />}
+      {d.status === "failed" && <ErrorNote message={d.error ?? "This file couldn't be read."} />}
+      {d.status === "ready" && (
+        <>
+          <nav aria-label="Study modes" className="-mx-1 flex gap-1 overflow-x-auto px-1">
+            {TABS.map((t) => (
+              <NavLink
+                key={t.id}
+                to={`/doc/${d.id}/${t.id}`}
+                className={() =>
+                  `shrink-0 rounded-full px-4 py-2 font-bold transition-colors ${
+                    active === t.id ? "bg-ink text-paper" : "text-ink-soft hover:bg-paper hover:text-ink"
+                  }`
+                }
+              >
+                {t.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div key={active}>{panels[active](d)}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DocumentHeader({ doc }: { doc: KukiDocument }) {
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    setBusy(true);
+    await api.documents.remove(doc.id).catch(() => setBusy(false));
+    navigate("/");
+  }
+
+  return (
+    <header className="flex flex-wrap items-start gap-4">
+      <span aria-hidden className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-whale-wash text-whale-deep">
+        <KindIcon kind={doc.kind} className="h-7 w-7" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h1 className="text-3xl font-bold sm:text-4xl">{doc.title}</h1>
+        <p className="mt-1 text-ink-soft">
+          {KIND_LABEL[doc.kind]}
+          {doc.status === "ready" && `, ${partsLabel(doc.kind, doc.segment_count)}`}
+        </p>
+        {doc.attribution && (
+          <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+            {doc.attribution}{" "}
+            {doc.source_url && <a href={doc.source_url} target="_blank" rel="noreferrer" className="underline">Original</a>}
+          </p>
+        )}
+        {doc.audio_url && (
+          <audio controls preload="none" src={doc.audio_url} className="mt-3 w-full max-w-md">
+            <a href={doc.audio_url}>Lecture recording</a>
+          </audio>
+        )}
+      </div>
+      <div className="flex gap-2">
+        {confirming ? (
+          <>
+            <Button variant="danger" busy={busy} onClick={remove}>Delete for good</Button>
+            <Button onClick={() => setConfirming(false)}>Keep it</Button>
+          </>
+        ) : (
+          <Button variant="danger" onClick={() => setConfirming(true)}>Delete</Button>
+        )}
+      </div>
+    </header>
+  );
+}
