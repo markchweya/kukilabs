@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError, type Knowledge, type KukiDocument, type StudyPack } from "../../api";
 import { Citations } from "../../components/sources";
 import { Button, Empty, ErrorNote, Working } from "../../components/ui";
@@ -17,6 +17,12 @@ export function PackPanel({ doc }: { doc: KukiDocument }) {
   const [knowledge, setKnowledge] = useState<Knowledge>("notes_only");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Rewriting should default to the policy the current pack was made with.
+  const savedKnowledge = pack.data?.knowledge;
+  useEffect(() => {
+    if (savedKnowledge) setKnowledge(savedKnowledge);
+  }, [savedKnowledge]);
 
   async function generate() {
     setGenerating(true);
