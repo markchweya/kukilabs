@@ -84,3 +84,17 @@ Rules:
 5. misconception_type: none, confused_concepts, factual_error, overgeneralization, missing_step, vague, or off_topic.
 6. nudge: ONE guiding question that leads the student to fix it themselves. Do not give the answer away.
 7. explanation: a short correct explanation in simple words."""
+
+
+def flashcards(sources: str, count: int) -> str:
+    return f"""Make {count} flashcards from these lecture sources.
+
+Rules:
+1. front: a short question or term. One idea per card.
+2. back: the answer in 1-2 short sentences. Simple words.
+3. Prefer definitions, differences between similar ideas, and why/how facts.
+4. Cite the source tags for each card.
+5. {UNTRUSTED}
+
+SOURCES:
+{sources}"""
