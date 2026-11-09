@@ -59,8 +59,13 @@ function CourseBlock({ course, onImported }: { course: Course; onImported: () =>
           <h2 className="mt-0.5 text-2xl font-semibold">{course.title}</h2>
           <p className="mt-1 text-ink-soft">{course.description}</p>
         </div>
-        <span className="rounded-full bg-tide px-3 py-1 text-sm font-bold">
-          {imported ? `${imported} of ${course.lectures.length} imported` : `${course.lectures.length} lectures`}
+        <span className="flex items-center gap-2">
+          <span className="rounded-full bg-tide px-3 py-1 text-sm font-bold">
+            {imported ? `${imported} of ${course.lectures.length} imported` : `${course.lectures.length} lectures`}
+          </span>
+          <svg aria-hidden viewBox="0 0 24 24" className={`h-5 w-5 text-ink-soft transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </span>
       </button>
 
