@@ -38,14 +38,41 @@ class QuizDraft(BaseModel):
     questions: list[QuestionDraft]
 
 
+class ClaimCheck(BaseModel):
+    claim: str = Field(description="One thing the student said, quoted or closely paraphrased from THEIR answer")
+    status: Literal["supported", "contradicted", "not_in_notes"] = Field(
+        description="supported: the lecture agrees. contradicted: the lecture says otherwise. not_in_notes: the lecture doesn't say"
+    )
+    correction: str = Field(description="If contradicted: what the lecture actually says. Otherwise empty")
+
+
 class GradeDraft(BaseModel):
-    verdict: Verdict
-    score: int = Field(ge=0, le=100)
-    got_right: list[str] = Field(description="What the student understood correctly")
-    misconception: str = Field(description="The specific wrong or missing idea, in one sentence. Empty if correct")
+    """What the model writes when grading.
+
+    Field order matters: constrained decoding writes fields in schema order,
+    so the model checks each claim against the lecture *before* it picks a
+    misconception type. The verdict and score are then computed in code from
+    these checks (see quiz.aggregate_grade), because a 3B model's holistic
+    scores proved unreliable in testing while its per-claim checks were good.
+    """
+
+    claims: list[ClaimCheck]
+    missing_ideas: list[str] = Field(description="Key ideas from the list that the answer does not cover, copied exactly")
     misconception_type: MisconceptionType
     nudge: str = Field(description="One guiding question that helps the student find the fix themselves")
-    explanation: str = Field(description="A short correct explanation, shown only if the student asks")
+    explanation: str = Field(description="A short correct explanation using only the lecture sources")
+
+
+class GradeResult(BaseModel):
+    """A finished grade, from either the AI grader or the offline keyword grader."""
+
+    verdict: Verdict
+    score: int = Field(ge=0, le=100)
+    got_right: list[str]
+    misconception: str
+    misconception_type: MisconceptionType
+    nudge: str
+    explanation: str
 
 
 # ---- what the API returns -------------------------------------------------

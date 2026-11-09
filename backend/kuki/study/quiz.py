@@ -16,7 +16,7 @@ from kuki.study import prompts
 from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
-from kuki.study.quiz_models import Grade, GradeDraft, QuizDraft, Question
+from kuki.study.quiz_models import ClaimCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
 from kuki.study.text import clean
 
@@ -156,17 +156,18 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
             temperature=0.1,  # grading should be consistent, not creative
             num_ctx=library.settings.num_ctx,
         )
+        result = aggregate_grade(draft, answer, key_ideas)
         mode = "ai"
     except OllamaError as exc:
         log.info("AI grading failed (%s); using keyword overlap.", exc)
-        draft = keyword_grade(answer, key_ideas, row["ideal_answer"])
+        result = keyword_grade(answer, key_ideas, row["ideal_answer"])
         mode = "keyword"
 
     with transaction(library.conn):
         cur = library.conn.execute(
             "INSERT INTO attempts(question_id, answer, verdict, score, misconception, misconception_type, feedback)"
             " VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (question_id, answer, draft.verdict, draft.score, draft.misconception, draft.misconception_type, draft.model_dump_json()),
+            (question_id, answer, result.verdict, result.score, result.misconception, result.misconception_type, result.model_dump_json()),
         )
     return Grade(
         attempt_id=cur.lastrowid,
@@ -175,8 +176,89 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
         key_ideas=key_ideas,
         citations=citations,
         mode=mode,
-        **draft.model_dump(),
+        **result.model_dump(),
     )
+
+
+# Each contradicted claim costs this many points on top of missing key ideas.
+CONTRADICTION_PENALTY = 30
+
+
+def aggregate_grade(draft: GradeDraft, answer: str, key_ideas: list[str]) -> GradeResult:
+    """Turn per-claim checks into a verdict, score and feedback, in code.
+
+    Guards against what a real 3B model did in testing:
+    * praising things the student never said -> a claim only counts if it
+      overlaps the student's own words;
+    * flagging a correct statement as a misconception -> a misconception now
+      requires a claim the model marked as contradicted by the lecture;
+    * inconsistent scores -> the score is computed from key-idea coverage
+      and contradictions, not chosen by the model.
+    """
+    claims = [c for c in draft.claims if clean(c.claim) and _said_by_student(c.claim, answer)]
+    supported = [c for c in claims if c.status == "supported"]
+    contradicted = [c for c in claims if c.status == "contradicted"]
+    wanted = {_norm(k): k for k in key_ideas}
+    missing = [wanted[_norm(m)] for m in draft.missing_ideas if _norm(m) in wanted]
+    missing = list(dict.fromkeys(missing))  # de-duplicate, keep order
+
+    coverage = (len(key_ideas) - len(missing)) / len(key_ideas) if key_ideas else (1.0 if supported else 0.0)
+    score = round(100 * coverage) - CONTRADICTION_PENALTY * len(contradicted)
+    if not claims:
+        score = 0
+    score = max(0, min(100, score))
+
+    if contradicted:
+        first = contradicted[0]
+        correction = clean(first.correction) or "the lecture says otherwise"
+        misconception = f"You said “{clean(first.claim)}”, but {_lower_first(correction)}"
+        kind = draft.misconception_type if draft.misconception_type in ("confused_concepts", "factual_error", "overgeneralization") else "factual_error"
+    elif missing:
+        misconception = "Your answer leaves out: " + "; ".join(missing)
+        kind = "missing_step" if supported else ("off_topic" if draft.misconception_type == "off_topic" else "vague")
+    else:
+        misconception, kind = "", "none"
+
+    if not contradicted and not missing and claims:
+        verdict = "correct"
+    elif not supported or score < 20:
+        verdict = "incorrect"
+    else:
+        verdict = "partial"
+
+    return GradeResult(
+        verdict=verdict,
+        score=score,
+        got_right=[clean(c.claim) for c in supported],
+        misconception=misconception,
+        misconception_type=kind,
+        nudge="" if verdict == "correct" else clean(draft.nudge),
+        explanation=clean(draft.explanation),
+    )
+
+
+def _lower_first(text: str) -> str:
+    """Lowercase a sentence's first letter to continue a sentence, unless it starts an acronym (DFS, A*)."""
+    first = text.split(" ", 1)[0]
+    if len(first) > 1 and not first[1:].islower():
+        return text
+    return text[:1].lower() + text[1:]
+
+
+def _norm(text: str) -> str:
+    return " ".join(tokenize(text))
+
+
+def _said_by_student(claim: str, answer: str, threshold: float = 0.75) -> bool:
+    """True if nearly all of the claim's words appear in the student's answer.
+
+    Strict on purpose: "DFS uses a stack" must not pass against an answer that
+    only shares "DFS uses" with it.
+    """
+    claim_terms = set(tokenize(claim))
+    if not claim_terms:
+        return False
+    return len(claim_terms & set(tokenize(answer))) / len(claim_terms) >= threshold
 
 
 def _cited_text(library: Library, citations: list[Citation]) -> str:
@@ -190,7 +272,7 @@ def _cited_text(library: Library, citations: list[Citation]) -> str:
     return "\n\n".join(f"({r[0]}) {r[1][:1800]}" for r in rows) or "(none)"
 
 
-def keyword_grade(answer: str, key_ideas: list[str], ideal_answer: str) -> GradeDraft:
+def keyword_grade(answer: str, key_ideas: list[str], ideal_answer: str) -> GradeResult:
     """Offline backup grader: how many key ideas does the answer touch?
 
     Crude but honest. It never claims to have found a misconception it cannot
@@ -205,7 +287,7 @@ def keyword_grade(answer: str, key_ideas: list[str], ideal_answer: str) -> Grade
 
     score = round(100 * len(covered) / max(1, len(key_ideas)))
     verdict = "correct" if score >= 80 else "partial" if score >= 34 else "incorrect"
-    return GradeDraft(
+    return GradeResult(
         verdict=verdict,
         score=score,
         got_right=covered,

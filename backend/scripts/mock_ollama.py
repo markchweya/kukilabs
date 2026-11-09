@@ -58,12 +58,16 @@ def answer(title: str, prompt: str) -> dict:
             "sources": [t],
         } for t, _, b in src[:5]]}
     if title == "GradeDraft":
+        # Treat the student's first sentence as one supported claim and report
+        # every key idea after the first as missing.
+        answer = re.search(r'"""(.*?)"""', prompt, re.S)
+        said = first_sentence(answer.group(1)) if answer else ""
+        ideas = re.findall(r"^- (.+)$", prompt.split("KEY IDEAS:")[-1].split("LECTURE SOURCES:")[0], re.M)
         return {
-            "verdict": "partial", "score": 55,
-            "got_right": ["You identified the main idea."],
-            "misconception": "(Mock grader) Your answer leaves out a key part of the explanation.",
+            "claims": [{"claim": said, "status": "supported", "correction": ""}] if said else [],
+            "missing_ideas": ideas[1:],
             "misconception_type": "missing_step",
-            "nudge": "What happens in the step between the input and the result?",
+            "nudge": "(Mock) What happens in the step between the input and the result?",
             "explanation": "This feedback comes from the development mock, not a model.",
         }
     if title == "DeckDraft":

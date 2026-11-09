@@ -55,14 +55,20 @@ def test_ai_grade_records_misconception(setup):
     fake.respond("QuizDraft", QUIZ)
     q = generate_quiz(library, llm, doc_id)[0]
     fake.respond("GradeDraft", {
-        "verdict": "partial", "score": 50, "got_right": ["BFS uses a queue"],
-        "misconception": "You said DFS also uses a queue; it uses a stack.",
+        "claims": [
+            {"claim": "BFS uses a queue", "status": "supported", "correction": ""},
+            {"claim": "DFS uses a queue too", "status": "contradicted", "correction": "DFS uses a stack."},
+        ],
+        "missing_ideas": ["DFS uses a stack and goes deep first"],
         "misconception_type": "confused_concepts",
         "nudge": "What data structure lets you go back to the most recent node?",
         "explanation": "DFS uses a stack.",
     })
     grade = grade_answer(library, llm, q.id, "BFS uses a queue and DFS uses a queue too")
     assert grade.mode == "ai" and grade.misconception_type == "confused_concepts"
+    assert grade.misconception == "You said “DFS uses a queue too”, but DFS uses a stack."
+    assert grade.got_right == ["BFS uses a queue"]
+    assert (grade.verdict, grade.score) == ("partial", 20)  # 50% coverage - 30 for the contradiction
     assert grade.ideal_answer.startswith("BFS uses")
     # The grader saw the cited lecture text, not just the model answer.
     _, body = fake.requests[-1]
@@ -108,3 +114,53 @@ def test_short_concept_labels():
     assert short_concept("Explaining the concept of admissible heuristics in A* search") == "Admissible heuristics in A* search"
     assert short_concept("BFS vs DFS") == "BFS vs DFS"
     assert short_concept("  ") == "General"
+
+
+# ---- regression cases from a real Llama 3.2 3B run --------------------------
+
+from kuki.study.quiz import aggregate_grade  # noqa: E402
+from kuki.study.quiz_models import GradeDraft  # noqa: E402
+
+KEY_IDEAS = ["BFS uses a FIFO queue", "DFS uses a stack and goes deep first"]
+
+
+def draft(claims, missing=(), kind="none"):
+    return GradeDraft(
+        claims=[{"claim": c, "status": s, "correction": corr} for c, s, corr in claims],
+        missing_ideas=list(missing), misconception_type=kind, nudge="Think about it?", explanation="E.",
+    )
+
+
+def test_praise_for_things_the_student_never_said_is_dropped():
+    answer = "DFS finds the shortest path because it uses a queue and explores level by level."
+    result = aggregate_grade(draft([
+        ("DFS uses a stack", "supported", ""),  # the real model invented this
+        ("DFS finds the shortest path because it uses a queue", "contradicted", "DFS uses a stack and may not find the shortest path."),
+    ], missing=KEY_IDEAS, kind="overgeneralization"), answer, KEY_IDEAS)
+    assert result.got_right == []
+    assert result.verdict == "incorrect" and result.score == 0
+    assert result.misconception.startswith("You said “DFS finds the shortest path")
+    assert "DFS uses a stack and may not" in result.misconception
+
+
+def test_correct_answer_gets_no_misconception():
+    # The real model marked this good answer "partial" with a false misconception.
+    answer = "BFS uses a FIFO queue so it explores level by level; DFS uses a stack and goes deep first."
+    result = aggregate_grade(draft([
+        ("BFS uses a FIFO queue so it explores level by level", "supported", ""),
+        ("DFS uses a stack and goes deep first", "supported", ""),
+    ], kind="overgeneralization"), answer, KEY_IDEAS)
+    assert (result.verdict, result.score, result.misconception, result.misconception_type) == ("correct", 100, "", "none")
+    assert result.nudge == ""
+
+
+def test_missing_idea_without_errors_is_a_missing_step():
+    answer = "BFS uses a FIFO queue."
+    result = aggregate_grade(draft([("BFS uses a FIFO queue", "supported", "")], missing=[KEY_IDEAS[1], "invented idea"]), answer, KEY_IDEAS)
+    assert (result.verdict, result.score, result.misconception_type) == ("partial", 50, "missing_step")
+    assert result.misconception == "Your answer leaves out: DFS uses a stack and goes deep first"
+
+
+def test_empty_or_unrelated_answer():
+    result = aggregate_grade(draft([], missing=KEY_IDEAS, kind="off_topic"), "I like turtles", KEY_IDEAS)
+    assert (result.verdict, result.score, result.misconception_type) == ("incorrect", 0, "off_topic")
