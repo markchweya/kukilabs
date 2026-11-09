@@ -36,11 +36,12 @@ def create_app(settings: Settings | None = None, llm: OllamaClient | None = None
     )
     _register_errors(app)
 
-    from kuki.api.routes import documents, status, study
+    from kuki.api.routes import documents, quiz, status, study
 
     app.include_router(status.router)
     app.include_router(documents.router)
     app.include_router(study.router)
+    app.include_router(quiz.router)
     return app
 
 
