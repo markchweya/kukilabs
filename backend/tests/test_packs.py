@@ -1,7 +1,9 @@
+from dataclasses import replace
+
 import pytest
 
 from kuki import db
-from kuki.config import Settings
+from kuki.ingest import Segment
 from kuki.library import Library
 from kuki.llm import OllamaClient
 from kuki.study.packs import generate_pack, load_pack
@@ -74,9 +76,8 @@ def test_offline_falls_back_to_extractive(setup):
 
 def test_long_documents_are_batched(setup, settings):
     library, fake, llm, doc_id = setup
-    small = Settings(**{**settings.__dict__, "num_ctx": 2048})
-    library.settings = small
-    library.save_segments(doc_id, [__import__("kuki.ingest", fromlist=["Segment"]).Segment(f"Slide {i}", "x " * 900) for i in range(4)])
+    library.settings = replace(settings, num_ctx=2048)
+    library.save_segments(doc_id, [Segment(f"Slide {i}", "x " * 900) for i in range(4)])
     fake.respond("StudyPackDraft", {"concepts": [], "key_points": [], "examples": [], "common_mistakes": []})
     generate_pack(library, llm, doc_id)
     pack_calls = [b for path, b in fake.requests if path == "/api/chat" and b["format"]["title"] == "StudyPackDraft"]
