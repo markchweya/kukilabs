@@ -98,3 +98,18 @@ Rules:
 
 SOURCES:
 {sources}"""
+
+
+def ask(question: str, sources: str) -> str:
+    return f"""Answer the student's question using the lecture sources.
+
+Rules:
+1. {NOTES_ONLY}
+2. If the sources do not contain the answer, set found to false and say so plainly. Do not guess.
+3. Keep it short and clear. Use a small example if it helps.
+4. {UNTRUSTED}
+
+QUESTION: {question}
+
+SOURCES:
+{sources}"""
