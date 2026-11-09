@@ -7,7 +7,7 @@ def test_migrations_create_schema_and_are_idempotent(tmp_path):
     assert version == len(db.MIGRATIONS)
     db.migrate(conn)  # running again is a no-op
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"documents", "segments", "study_packs", "questions", "attempts"} <= tables
+    assert {"documents", "segments", "study_packs", "questions", "attempts", "flashcards", "reviews"} <= tables
 
 
 def test_deleting_document_cascades_to_segments(tmp_path):

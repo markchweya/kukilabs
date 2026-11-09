@@ -71,6 +71,29 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX attempts_by_question ON attempts(question_id, created_at);
     """,
+    # 4: flashcards with SM-2 scheduling state, and their review log
+    """
+    CREATE TABLE flashcards (
+        id            INTEGER PRIMARY KEY,
+        document_id   TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+        front         TEXT NOT NULL,
+        back          TEXT NOT NULL,
+        citations     TEXT NOT NULL,             -- JSON list of Citation
+        ease          REAL NOT NULL DEFAULT 2.5,
+        interval_days INTEGER NOT NULL DEFAULT 0,
+        repetitions   INTEGER NOT NULL DEFAULT 0,
+        lapses        INTEGER NOT NULL DEFAULT 0,
+        due_at        TEXT NOT NULL DEFAULT (datetime('now')),
+        created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX flashcards_due ON flashcards(due_at);
+    CREATE TABLE reviews (
+        id            INTEGER PRIMARY KEY,
+        card_id       INTEGER NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+        grade         INTEGER NOT NULL,
+        reviewed_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    """,
 ]
 
 
