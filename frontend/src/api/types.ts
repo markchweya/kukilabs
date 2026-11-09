@@ -96,6 +96,7 @@ export interface Flashcard {
   back: string;
   citations: Citation[];
   due_at: string;
+  ease: number;
   interval_days: number;
   repetitions: number;
   lapses: number;
