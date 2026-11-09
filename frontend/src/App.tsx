@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
 import Library from "./pages/Library";
+import { AskPanel } from "./pages/doc/AskPanel";
 import { CardsPanel } from "./pages/doc/CardsPanel";
 import { PackPanel } from "./pages/doc/PackPanel";
 import { QuizPanel } from "./pages/doc/QuizPanel";
@@ -22,7 +23,7 @@ const router = createBrowserRouter([
               pack: (d) => <PackPanel doc={d} />,
               quiz: (d) => <QuizPanel doc={d} />,
               cards: (d) => <CardsPanel doc={d} />,
-              ask: () => <Placeholder name="Ask" />,
+              ask: (d) => <AskPanel doc={d} />,
               source: (d) => <SourcePanel doc={d} />,
             }}
           />
