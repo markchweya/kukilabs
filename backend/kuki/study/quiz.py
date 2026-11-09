@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 import sqlite3
 
 from kuki.db import transaction
@@ -17,6 +18,7 @@ from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
 from kuki.study.quiz_models import Grade, GradeDraft, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
+from kuki.study.text import clean
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +61,13 @@ def generate_quiz(library: Library, llm: OllamaClient, doc_id: str, count: int =
             num_ctx=library.settings.num_ctx,
         )
         rows = [
-            (q.concept, q.question, q.ideal_answer, q.key_ideas, sources.resolve(q.sources))
+            (
+                short_concept(q.concept),
+                clean(q.question),
+                clean(q.ideal_answer),
+                [clean(k) for k in q.key_ideas if clean(k)],
+                sources.resolve(q.sources),
+            )
             for q in draft.questions[:count]
         ]
         # Questions the model could not tie to the notes are not worth asking.
@@ -69,6 +77,24 @@ def generate_quiz(library: Library, llm: OllamaClient, doc_id: str, count: int =
         rows = _offline_questions(passages, count)
 
     return [_store_question(library.conn, doc_id, *row) for row in rows]
+
+
+_LEADING_VERBS = re.compile(r"^(explaining|explain|comparing|compare|applying|apply|understanding|the concept of)\s+(the\s+)?(concept of\s+)?", re.I)
+
+
+def short_concept(text: str, max_words: int = 6) -> str:
+    """Keep concept labels short enough to group on the Weak spots page.
+
+    Small models sometimes write a sentence ("Explaining the difference between
+    BFS and DFS") despite the prompt; strip the leading verb and cap the length.
+    """
+    text = _LEADING_VERBS.sub("", clean(text)).strip()
+    words = text.split()[:max_words]
+    # Don't end a cut-off label on a connector ("... BFS and").
+    while words and words[-1].lower() in {"and", "or", "of", "the", "in", "between", "vs", "to", "a", "for", "with"}:
+        words.pop()
+    text = " ".join(words)
+    return (text[:1].upper() + text[1:]) if text else "General"
 
 
 def _offline_questions(passages: list[Passage], count: int):

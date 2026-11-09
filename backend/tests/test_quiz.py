@@ -99,3 +99,12 @@ def test_spread_sample_covers_whole_document():
     ids = [p.segment_id for p in picked]
     assert len(ids) == 10 and ids == sorted(ids)
     assert max(ids) > 25  # not just the first slides
+
+
+def test_short_concept_labels():
+    from kuki.study.quiz import short_concept
+
+    assert short_concept("Explaining the difference between Breadth-First Search (BFS) and Depth-First Search (DFS)") == "Difference between Breadth-First Search (BFS)"
+    assert short_concept("Explaining the concept of admissible heuristics in A* search") == "Admissible heuristics in A* search"
+    assert short_concept("BFS vs DFS") == "BFS vs DFS"
+    assert short_concept("  ") == "General"

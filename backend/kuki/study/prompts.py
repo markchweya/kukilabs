@@ -56,10 +56,11 @@ def quiz(sources: str, count: int) -> str:
 Rules:
 1. Ask the student to EXPLAIN, COMPARE or APPLY an idea in their own words. No yes/no or one-word trivia.
 2. Each question tests a different concept.
-3. ideal_answer: what a strong student would write, 2-4 sentences, based only on the sources.
-4. key_ideas: the 2-4 ideas the answer must contain.
-5. Cite the source tags each question is based on.
-6. {UNTRUSTED}
+3. concept: a short NAME of 1-4 words, like "BFS vs DFS" or "Admissible heuristics". Not a sentence.
+4. ideal_answer: what a strong student would write, 2-4 sentences, based only on the sources.
+5. key_ideas: 2-4 short FACTS the answer must state, each a full statement like "BFS uses a FIFO queue". Not topic labels like "Memory usage".
+6. Cite the source tags each question is based on.
+7. {UNTRUSTED}
 
 SOURCES:
 {sources}"""

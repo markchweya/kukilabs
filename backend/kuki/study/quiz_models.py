@@ -27,10 +27,10 @@ MisconceptionType = Literal[
 
 
 class QuestionDraft(BaseModel):
-    concept: str = Field(description="The concept being tested, 1-4 words")
+    concept: str = Field(description="Short name of the concept tested, 1-4 words, e.g. 'BFS vs DFS'")
     question: str = Field(description="An open question asking the student to explain in their own words")
     ideal_answer: str = Field(description="A model answer, 2-4 sentences")
-    key_ideas: list[str] = Field(description="2-4 ideas a good answer must include")
+    key_ideas: list[str] = Field(description="2-4 facts a good answer must state, each a full sentence")
     sources: list[str]
 
 
