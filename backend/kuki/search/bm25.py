@@ -17,7 +17,8 @@ from collections import Counter
 STOP_WORDS = frozenset(
     "a an and are as at be by for from has have in is it its of on or that the this to was were will with".split()
 )
-_TOKEN = re.compile(r"[a-z0-9]+(?:['\-*+][a-z0-9]+)*")
+# Keeps hyphenated words (k-means) and trailing operators (A*, C++) intact.
+_TOKEN = re.compile(r"[a-z0-9]+(?:['\-][a-z0-9]+)*[*+]*")
 
 
 def tokenize(text: str) -> list[str]:
