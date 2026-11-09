@@ -4,15 +4,10 @@
 // pointing at the exact slide, page or timestamp. Tapping one opens the
 // drawer with the full original passage, so the student can check Kuki
 // instead of having to trust it.
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type Citation, type Segment } from "../api";
+import { SourceContext, useOpenSource } from "../lib/sourceContext";
 import { Spinner } from "./ui";
-
-const SourceContext = createContext<(c: Citation) => void>(() => {});
-
-export function useOpenSource() {
-  return useContext(SourceContext);
-}
 
 export function SourceProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<Citation | null>(null);
