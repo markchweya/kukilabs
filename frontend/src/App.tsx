@@ -1,5 +1,6 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Link, RouterProvider } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { Empty } from "./components/ui";
 import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
 import Courses from "./pages/Courses";
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
       { path: "/review", element: <Review /> },
       { path: "/progress", element: <Progress /> },
       { path: "/courses", element: <Courses /> },
+      {
+        path: "*",
+        element: <Empty title="This page doesn't exist" action={<Link to="/" className="font-bold text-whale-deep underline">Back to your library</Link>} />,
+      },
     ],
   },
 ]);
