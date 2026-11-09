@@ -44,6 +44,16 @@ class SegmentOut(BaseModel):
     text: str
 
 
+def nice_title(filename: str) -> str:
+    """'week-4_search_algorithms (1).pptx' -> 'Week 4 search algorithms'."""
+    import re
+
+    stem = re.sub(r"\s*\(\d+\)$", "", Path(filename).stem)  # drop "(1)" download suffixes
+    words = re.sub(r"[_\-.]+", " ", stem).split()
+    text = " ".join(words) or "Untitled"
+    return text[0].upper() + text[1:]
+
+
 def process_document(settings: Settings, llm: OllamaClient, doc_id: str, path: Path) -> None:
     """Background job: read the file, then embed it if the model is available."""
     library = open_library(settings)
@@ -65,7 +75,7 @@ def upload(
 ) -> DocumentOut:
     filename = Path(file.filename or "upload").name  # never trust client paths
     kind = kind_for(filename)  # 422 for unsupported types, before saving anything
-    doc_id = library.create_document(title=(title or Path(filename).stem).strip()[:200], filename=filename, kind=kind)
+    doc_id = library.create_document(title=(title or nice_title(filename))[:200], filename=filename, kind=kind)
     dest = library.upload_path(doc_id, filename)
 
     # Stream to disk in chunks so a 200 MB lecture video never sits in memory,

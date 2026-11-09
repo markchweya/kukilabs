@@ -6,7 +6,7 @@ from tests.api_helpers import make_client, upload_notes
 def test_upload_processes_in_background_and_lists(settings):
     client, fake = make_client(settings)
     created = upload_notes(client)
-    assert created["status"] == "processing" and created["title"] == "week4"
+    assert created["status"] == "processing" and created["title"] == "Week4"
 
     # TestClient runs background tasks before returning, so it is ready now.
     doc = client.get(f"/api/documents/{created['id']}").json()
@@ -50,3 +50,10 @@ def test_delete_and_404(settings):
     doc = upload_notes(client)
     assert client.delete(f"/api/documents/{doc['id']}").status_code == 204
     assert client.get(f"/api/documents/{doc['id']}").status_code == 404
+
+
+def test_nice_titles():
+    from kuki.api.routes.documents import nice_title
+
+    assert nice_title("week-4_search_algorithms (1).pptx") == "Week 4 search algorithms"
+    assert nice_title("___.pdf") == "Untitled"

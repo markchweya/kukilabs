@@ -21,7 +21,7 @@ def test_generate_get_and_export_pack(settings):
 
     md = client.get(f"/api/documents/{doc['id']}/pack/markdown")
     assert md.headers["content-disposition"].endswith('search-algorithms.md"')
-    assert "**Heuristic**: Estimated cost to goal. — week4, Section: Informed search" in md.text
+    assert "**Heuristic**: Estimated cost to goal. — Week4, Section: Informed search" in md.text
 
 
 def test_pack_requires_ready_document(settings):
