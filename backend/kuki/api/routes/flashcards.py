@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
 
 from kuki.api.deps import ensure_ready, get_library, get_llm
@@ -58,3 +58,29 @@ def review(card_id: int, body: ReviewRequest, library: Library = Depends(get_lib
 @router.delete("/api/flashcards/{card_id}", status_code=204)
 def delete(card_id: int, library: Library = Depends(get_library)) -> None:
     fc.delete_card(library, card_id)
+
+
+@router.get("/api/documents/{doc_id}/flashcards/anki.txt")
+def export_anki(doc_id: str, library: Library = Depends(get_library)) -> Response:
+    """Export the deck as an Anki-importable text file (File > Import in Anki).
+
+    Uses Anki's file headers so the separator and tags column are detected
+    automatically. Each back side keeps its source so cards stay checkable.
+    """
+    doc = library.get_document(doc_id)
+    tag = "kuki::" + "".join(ch if ch.isalnum() else "_" for ch in doc.title)[:60]
+    lines = ["#separator:tab", "#html:false", "#tags column:3"]
+    for card in fc.all_cards(library, doc_id):
+        sources = ", ".join(c.locator for c in card.citations)
+        back = f"{card.back} (Source: {doc.title}, {sources})" if sources else card.back
+        lines.append("\t".join(_clean(x) for x in (card.front, back, tag)))
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="kuki-{doc_id}-anki.txt"'},
+    )
+
+
+def _clean(field: str) -> str:
+    """Tabs and newlines would break Anki's row/column parsing."""
+    return " ".join(field.replace("\t", " ").split())

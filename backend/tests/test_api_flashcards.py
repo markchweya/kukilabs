@@ -22,3 +22,18 @@ def test_flashcard_flow(settings):
     assert client.post(f"/api/flashcards/{cards[1]['id']}/review", json={"button": "meh"}).status_code == 422
     assert client.delete(f"/api/flashcards/{cards[1]['id']}").status_code == 204
     assert len(client.get(f"/api/documents/{doc['id']}/flashcards").json()) == 1
+
+
+def test_anki_export(settings):
+    client, fake = make_client(settings)
+    fake.respond("DeckDraft", {"cards": [{"front": "What does\tBFS use?", "back": "A FIFO\nqueue.", "sources": ["S1"]}]})
+    doc = upload_notes(client)
+    client.post(f"/api/documents/{doc['id']}/flashcards")
+    res = client.get(f"/api/documents/{doc['id']}/flashcards/anki.txt")
+    lines = res.text.splitlines()
+    assert lines[:3] == ["#separator:tab", "#html:false", "#tags column:3"]
+    front, back, tag = lines[3].split("\t")
+    assert front == "What does BFS use?"
+    assert back == "A FIFO queue. (Source: Week4, Section: Uninformed search)"
+    assert tag == "kuki::Week4"
+    assert "attachment" in res.headers["content-disposition"]
