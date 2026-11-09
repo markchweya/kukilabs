@@ -16,6 +16,7 @@ from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.study.quiz import spread_sample
 from kuki.study.sources import Citation, SourceSet
+from kuki.study.text import clean
 from kuki.study.srs import BUTTONS, CardState, next_due, review
 
 log = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def generate_cards(library: Library, llm: OllamaClient, doc_id: str, count: int 
             DeckDraft,
             num_ctx=library.settings.num_ctx,
         )
-        cards = [(c.front, c.back, sources.resolve(c.sources)) for c in deck.cards[:count]]
+        cards = [(clean(c.front), clean(c.back), sources.resolve(c.sources, f"{c.front} {c.back}")) for c in deck.cards[:count]]
         cards = [c for c in cards if c[2] and c[0].strip() and c[1].strip()]
     except OllamaError as exc:
         log.info("AI flashcards failed (%s); using extracted definitions.", exc)

@@ -61,7 +61,7 @@ def ask(library: Library, llm: OllamaClient, question: str, document_ids: list[s
             AnswerDraft,
             num_ctx=library.settings.num_ctx,
         )
-        citations = sources.resolve(draft.sources)
+        citations = sources.resolve(draft.sources, draft.answer)
         # An answer that claims to be found but cites nothing, or that says the
         # notes don't cover it, is not a found answer.
         found = draft.found and bool(citations) and not _NOT_FOUND.search(draft.answer)

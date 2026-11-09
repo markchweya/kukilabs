@@ -66,7 +66,7 @@ def generate_quiz(library: Library, llm: OllamaClient, doc_id: str, count: int =
                 clean(q.question),
                 clean(q.ideal_answer),
                 [clean(k) for k in q.key_ideas if clean(k)],
-                sources.resolve(q.sources),
+                sources.resolve(q.sources, f"{q.question} {q.ideal_answer}"),
             )
             for q in draft.questions[:count]
         ]
