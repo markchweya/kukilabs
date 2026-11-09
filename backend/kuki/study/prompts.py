@@ -29,11 +29,12 @@ def study_pack(sources: str, knowledge: str) -> str:
 
 Rules:
 1. {policy}
-2. concepts: the key terms, each with a plain explanation (up to 8).
-3. key_points: the most important ideas, one sentence each (up to 8).
-4. examples: worked examples or concrete illustrations (up to 3). Skip if none fit.
-5. common_mistakes: misunderstandings students often have about this material, with the correction (up to 4).
-6. {UNTRUSTED}
+2. Cite ONLY the source that directly states each item. Usually that is one source. Never add a source just because it mentions the topic.
+3. concepts: the key terms, each with a plain explanation (up to 8).
+4. key_points: the most important ideas, one sentence each (up to 8).
+5. examples: CONCRETE worked examples with a specific situation, numbers or steps, e.g. "On a road map, straight-line distance is a heuristic because...". Do NOT restate a definition. Leave the list empty if the sources have no concrete example.
+6. common_mistakes: misunderstandings students often have about this material, with the correction (up to 4).
+7. {UNTRUSTED}
 
 SOURCES:
 {sources}"""
@@ -43,6 +44,8 @@ def pack_summary(points: list[str], hint: str) -> str:
     bullet_list = "\n".join(f"- {p}" for p in points[:20])
     return f"""Write a short title and a 2-3 sentence overview for a study guide with these key points.
 The material is called "{hint}".
+The overview must say what the lecture actually teaches, using its specific ideas.
+Do not write "this study guide covers" or promise what the reader will be able to do.
 
 {bullet_list}"""
 
