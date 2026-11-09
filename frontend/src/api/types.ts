@@ -156,3 +156,12 @@ export interface Course {
   homepage: string;
   lectures: Lecture[];
 }
+
+export interface SearchHit {
+  segment_id: number;
+  document_id: string;
+  document_title: string;
+  locator: string;
+  text: string;
+  method: string;
+}

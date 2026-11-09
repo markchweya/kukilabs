@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { api, type KukiDocument } from "../api";
 import { DocumentList } from "../components/DocumentList";
 import { DropZone } from "../components/DropZone";
+import { LibrarySearch } from "../components/LibrarySearch";
 import { Empty, ErrorNote } from "../components/ui";
 import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
@@ -29,6 +30,7 @@ export default function Library() {
 
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">Your library</h2>
+        {docs.data && docs.data.some((d) => d.status === "ready") && <LibrarySearch />}
         {docs.error && <ErrorNote message={docs.error} onRetry={docs.reload} />}
         {docs.data && docs.data.length === 0 && (
           <Empty title="Nothing here yet" action={<Link to="/courses" className="font-bold text-whale-deep underline">Browse open courses</Link>}>

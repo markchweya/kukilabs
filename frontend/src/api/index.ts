@@ -2,7 +2,7 @@
 import { http } from "./client";
 import type {
   Answer, Course, DeckStats, Flashcard, Grade, Insights, Knowledge, KukiDocument,
-  Question, ReviewButton, Segment, Status, StudyPack,
+  Question, ReviewButton, SearchHit, Segment, Status, StudyPack,
 } from "./types";
 
 export * from "./types";
@@ -55,6 +55,8 @@ export const api = {
 
   ask: (question: string, documentIds?: string[]) =>
     http.post<Answer>("/api/ask", { question, document_ids: documentIds }),
+
+  search: (q: string) => http.get<SearchHit[]>(`/api/search?q=${enc(q)}`),
 
   courses: {
     list: () => http.get<Course[]>("/api/courses"),
