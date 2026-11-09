@@ -28,8 +28,10 @@ def parse_cs50_notes(html: str) -> ParsedLecture:
     return ParsedLecture(_finish(segment_text(text)))
 
 
-# Yale transcripts mark chapters like: "Chapter 2. The Ring of Gyges [00:11:30]"
-_CHAPTER = re.compile(r"^Chapter\s+\d+\.\s*(.+?)\s*\[(\d{1,2}:\d{2}:\d{2})\]\s*$", re.M)
+# Yale transcripts mark chapters like: "Chapter 2. The Ring of Gyges [00:11:30]".
+# Some courses use bold paragraphs, others real headings (which arrive here
+# prefixed with "##"), so leading hashes are optional.
+_CHAPTER = re.compile(r"^(?:#{1,4}\s+)?Chapter\s+\d+\.\s*(.+?)\s*\[(\d{1,2}:\d{2}:\d{2})\]\s*$", re.M)
 
 
 def parse_oyc_transcript(html: str, page_url: str = "https://oyc.yale.edu/") -> ParsedLecture:
