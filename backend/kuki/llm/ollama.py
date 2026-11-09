@@ -122,6 +122,18 @@ class OllamaClient:
                 ]
         raise OllamaError(f"The model did not return valid structured output ({last_error}).")
 
+    def embed(self, model: str, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+        """Embed many texts, batching requests to keep each payload small."""
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start : start + batch_size]
+            data = self._post("/api/embed", {"model": model, "input": batch})
+            got = data.get("embeddings")
+            if not isinstance(got, list) or len(got) != len(batch):
+                raise OllamaError("Ollama returned the wrong number of embeddings.")
+            vectors.extend(got)
+        return vectors
+
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         """POST JSON and translate transport failures into Kuki's error types."""
         try:
