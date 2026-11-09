@@ -41,6 +41,7 @@ class Flashcard(BaseModel):
     back: str
     citations: list[Citation]
     due_at: str
+    ease: float
     interval_days: int
     repetitions: int
     lapses: int
@@ -101,7 +102,7 @@ def generate_cards(library: Library, llm: OllamaClient, doc_id: str, count: int 
 
 # ---- reading and reviewing -------------------------------------------------
 
-_CARD_COLUMNS = "id, document_id, front, back, citations, due_at, interval_days, repetitions, lapses"
+_CARD_COLUMNS = "id, document_id, front, back, citations, due_at, ease, interval_days, repetitions, lapses"
 
 
 def _to_card(row) -> Flashcard:

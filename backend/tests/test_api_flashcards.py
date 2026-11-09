@@ -16,7 +16,7 @@ def test_flashcard_flow(settings):
     assert len(client.get("/api/flashcards/due").json()) == 2
 
     reviewed = client.post(f"/api/flashcards/{cards[0]['id']}/review", json={"button": "easy"}).json()
-    assert reviewed["repetitions"] == 1
+    assert reviewed["repetitions"] == 1 and reviewed["ease"] > 2.5  # "easy" raises ease
     assert client.get("/api/flashcards/stats").json() == {"total": 2, "due_now": 1, "learned": 1}
 
     assert client.post(f"/api/flashcards/{cards[1]['id']}/review", json={"button": "meh"}).status_code == 422
