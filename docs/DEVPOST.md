@@ -56,9 +56,17 @@ Word documents, photos of notes and lecture recordings, and turns them into:
 * **Fallbacks**: without a model, Kuki still builds extractive, cited packs,
   recall quizzes and keyword-graded feedback, and says so.
 
+* **Grading built for small models**: the answer is split into claims in
+  code, each claim is classified and then re-verified with a narrow
+  quote-first check, key ideas are matched by embedding similarity against
+  verified claims only, and the verdict and score are computed in code.
+  Every one of these steps came from measured failures of the real model
+  (`docs/REAL_MODEL_TESTING.md`).
+
 Stack: Python 3.11+, FastAPI, SQLite, NumPy, pypdf, python-pptx, python-docx,
-React 19, TypeScript, Vite, Tailwind CSS v4. Over 100 backend tests run in CI
-against an in-process fake of the Ollama API.
+React 19, TypeScript, Vite, Tailwind CSS v4. Over 140 backend tests run in CI
+against an in-process fake of the Ollama API, and every feature was
+end-to-end tested against the real Llama 3.2 3B model.
 
 ## Responsible AI
 
@@ -76,8 +84,9 @@ Video: [link]
 
 ## Screenshots
 
-[Capture with a real model running: library, study pack with the source
-drawer open, quiz feedback, weak spots, flashcard review, open courses.]
+Real Llama 3.2 3B output, captured through the app: `docs/screenshots/`
+(quiz-feedback, source-drawer, study-pack, ask, flashcard, open-courses,
+library, mobile). Upload these to Devpost.
 
 ## Source code
 
