@@ -134,3 +134,13 @@ h1, h2, h3 {
   from { transform: translateX(24px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
+
+/* Printing a study pack gives a clean revision sheet: no navigation or
+   controls, black on white, citations kept as plain text. */
+@media print {
+  :root { --tide: #fff; --paper: #fff; --belly: #fff; --ink: #000; --ink-soft: #333; }
+  aside, nav, header button, footer, .no-print, audio { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  .stitched, .stitched-sm { outline: none !important; }
+  section, li { break-inside: avoid; }
+}

@@ -58,7 +58,10 @@ export function PackPanel({ doc }: { doc: KukiDocument }) {
       <PackView pack={pack.data} />
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
         {controls}
-        <a href={api.pack.markdownUrl(doc.id)} className="font-bold text-whale-deep underline">Download as Markdown</a>
+        <div className="flex gap-4">
+          <button type="button" onClick={() => window.print()} className="font-bold text-whale-deep underline">Print</button>
+          <a href={api.pack.markdownUrl(doc.id)} className="font-bold text-whale-deep underline">Download as Markdown</a>
+        </div>
       </footer>
     </div>
   );
