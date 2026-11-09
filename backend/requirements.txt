@@ -1,0 +1,12 @@
+# Core runtime. Everything here installs from PyPI with no system packages.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+httpx>=0.27
+pydantic>=2.7
+python-multipart>=0.0.9
+numpy>=1.26
+
+# Document readers
+pypdf>=4.0
+python-docx>=1.1
+python-pptx>=0.6.23

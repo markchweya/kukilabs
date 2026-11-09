@@ -1,0 +1,8 @@
+# Optional extras. Kuki detects each one at runtime and degrades gracefully
+# if it is missing, so a minimal install still works.
+
+# Local OCR for photos of handwritten / printed notes
+rapidocr-onnxruntime>=1.2
+
+# Local speech-to-text for lecture recordings
+faster-whisper>=1.0
