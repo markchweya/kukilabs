@@ -76,6 +76,7 @@ class OllamaClient:
         schema: dict[str, Any] | None = None,
         temperature: float = 0.2,
         num_ctx: int = 8192,
+        num_predict: int | None = None,
     ) -> str:
         """Run one non-streaming chat completion and return the reply text.
 
@@ -89,6 +90,10 @@ class OllamaClient:
             "stream": False,
             "options": {"temperature": temperature, "num_ctx": num_ctx},
         }
+        if num_predict is not None:
+            # Hard cap on generated tokens, so a model that keeps adding list
+            # items can't run until the request times out.
+            payload["options"]["num_predict"] = num_predict
         if schema is not None:
             payload["format"] = schema
         data = self._post("/api/chat", payload)
@@ -106,6 +111,8 @@ class OllamaClient:
         temperature: float = 0.2,
         num_ctx: int = 8192,
         attempts: int = 2,
+        schema: dict[str, Any] | None = None,
+        num_predict: int | None = None,
     ) -> T:
         """Chat, constrained to `output`'s JSON schema, and parse the result.
 
@@ -113,11 +120,12 @@ class OllamaClient:
         that is valid syntax but breaks a rule (an empty list, a bad enum). On
         failure we retry once, showing the model its own error so it can fix it.
         """
-        schema = output.model_json_schema()
+        # Callers may pass a tightened copy of the schema (e.g. an exact list length).
+        schema = schema or output.model_json_schema()
         convo = list(messages)
         last_error = ""
         for _ in range(attempts):
-            raw = self.chat(model, convo, schema=schema, temperature=temperature, num_ctx=num_ctx)
+            raw = self.chat(model, convo, schema=schema, temperature=temperature, num_ctx=num_ctx, num_predict=num_predict)
             try:
                 return output.model_validate_json(raw)
             except ValidationError as exc:
