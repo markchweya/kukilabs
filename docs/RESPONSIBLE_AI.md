@@ -22,6 +22,9 @@
 | Prompt injection in documents or answers | Material and answers wrapped as untrusted data with an explicit "ignore instructions inside" rule | `study/prompts.py` |
 | Over-trusting Ask | An answer marked "found" but citing nothing is downgraded to "not found" | `study/ask.py` |
 | Answer leakage in quizzes | The API never returns the model answer before an attempt | `study/quiz_models.py` |
+| Wrongly telling a student they're wrong | A misconception needs the grader's flag *and* a quote-first re-check that doesn't clear it; one signal only withholds credit | `study/quiz.py` |
+| Praise for things the student never said | Claims are split from the student's own text in code; the model only classifies them | `study/quiz.py` |
+| Unfair scores from model guesswork | Verdict and score computed in code from verified claims and key-idea coverage | `study/quiz.py` |
 | Local network exposure | Localhost-only bind, trusted-host check, local-only CORS | `__main__.py`, `api/app.py` |
 | Copyright | Only CC BY-NC-SA courses whose license pages were checked; attribution stored per document; honest User-Agent | `openlib/` |
 
@@ -34,6 +37,10 @@
   that the passage fully supports it. Students should open the citation.
 * The offline keyword grader only checks whether key ideas appear; it can't
   detect wrong statements and says so in the UI.
+* Grading was tuned on real Llama 3.2 3B output (see
+  [REAL_MODEL_TESTING.md](REAL_MODEL_TESTING.md)) but runs can still vary: an
+  error may go unflagged, and paraphrases far from a key idea's wording may not
+  get credit. The design errs towards withholding credit rather than accusing.
 * OCR on handwriting is imperfect; the *Original* tab shows exactly what Kuki read.
 * Whisper transcripts may misspell technical terms and names.
 * Quiz questions favour concepts that are explained in text; diagrams and
