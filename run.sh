@@ -12,6 +12,7 @@ fi
 backend/.venv/bin/pip install -q -r backend/requirements.txt
 if [ "${1:-}" = "--full" ]; then
   backend/.venv/bin/pip install -q -r backend/requirements-optional.txt
+  shift  # the remaining arguments go to the server
 fi
 
 if [ ! -f frontend/dist/index.html ]; then
