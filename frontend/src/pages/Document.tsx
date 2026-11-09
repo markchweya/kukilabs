@@ -6,6 +6,7 @@ import { api, type KukiDocument } from "../api";
 import { KindIcon } from "../components/KindIcon";
 import { Button, ErrorNote, Working } from "../components/ui";
 import { KIND_LABEL, partsLabel } from "../lib/format";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
 
 const TABS = [
@@ -24,6 +25,7 @@ export default function DocumentPage({ panels }: { panels: Record<TabId, (doc: K
   const { id = "", tab = "pack" } = useParams();
   const doc = useResource(() => api.documents.get(id), [id], poll);
   const active = (TABS.some((t) => t.id === tab) ? tab : "pack") as TabId;
+  usePageTitle(doc.data?.title);
 
   if (doc.error) return <ErrorNote message={doc.error} onRetry={doc.reload} />;
   if (!doc.data) return null;

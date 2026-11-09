@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { api, type ConceptProgress, type MisconceptionType } from "../api";
 import { Empty, ErrorNote } from "../components/ui";
 import { MISCONCEPTION_LABEL } from "../lib/misconceptions";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
 
 const STATUS = {
@@ -21,6 +22,7 @@ const PATTERN_TIPS: Partial<Record<MisconceptionType, string>> = {
 };
 
 export default function Progress() {
+  usePageTitle("Weak spots");
   const insights = useResource(() => api.insights(), []);
   if (insights.error) return <ErrorNote message={insights.error} onRetry={insights.reload} />;
   if (!insights.data) return null;

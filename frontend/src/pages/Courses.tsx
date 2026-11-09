@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Course } from "../api";
 import { Button, ErrorNote } from "../components/ui";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
 
 export default function Courses() {
+  usePageTitle("Open courses");
   const courses = useResource(api.courses.list, []);
   if (courses.error) return <ErrorNote message={courses.error} onRetry={courses.reload} />;
 

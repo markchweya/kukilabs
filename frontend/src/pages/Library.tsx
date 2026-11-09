@@ -3,6 +3,7 @@ import { api, type KukiDocument } from "../api";
 import { DocumentList } from "../components/DocumentList";
 import { DropZone } from "../components/DropZone";
 import { Empty, ErrorNote } from "../components/ui";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
 
 // Poll every 1.5 s only while something is still being read.
@@ -10,6 +11,7 @@ const pollWhileProcessing = (docs?: KukiDocument[]) =>
   docs?.some((d) => d.status === "processing") ? 1500 : null;
 
 export default function Library() {
+  usePageTitle("Library");
   const docs = useResource(api.documents.list, [], pollWhileProcessing);
 
   return (

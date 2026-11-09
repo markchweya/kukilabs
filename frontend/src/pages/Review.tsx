@@ -4,9 +4,11 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { ReviewSession } from "../components/ReviewSession";
 import { Button, Empty, ErrorNote } from "../components/ui";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useResource } from "../lib/useResource";
 
 export default function Review() {
+  usePageTitle("Review");
   const due = useResource(() => api.cards.due(), []);
   const stats = useResource(() => api.cards.stats(), []);
   const [session, setSession] = useState(false);
