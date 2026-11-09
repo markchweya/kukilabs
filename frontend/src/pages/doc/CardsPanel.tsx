@@ -3,7 +3,7 @@ import { api, type KukiDocument } from "../../api";
 import { ReviewSession } from "../../components/ReviewSession";
 import { Citations } from "../../components/sources";
 import { Button, Empty, ErrorNote, Working } from "../../components/ui";
-import { relativeDays } from "../../lib/format";
+import { parseUtc, relativeDays } from "../../lib/format";
 import { useResource } from "../../lib/useResource";
 
 export function CardsPanel({ doc }: { doc: KukiDocument }) {
@@ -31,7 +31,7 @@ export function CardsPanel({ doc }: { doc: KukiDocument }) {
   if (!cards.data) return null;
 
   const now = Date.now();
-  const due = cards.data.filter((c) => new Date(`${c.due_at.replace(" ", "T")}Z`).getTime() <= now);
+  const due = cards.data.filter((c) => parseUtc(c.due_at).getTime() <= now);
 
   if (reviewing) {
     return <ReviewSession cards={due} onFinished={() => { setReviewing(false); void cards.reload(); }} />;
