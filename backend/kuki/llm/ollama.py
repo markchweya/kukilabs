@@ -11,10 +11,12 @@ surface we depend on is tiny and easy to mock in tests:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
+T = TypeVar("T", bound=BaseModel)
 Message = dict[str, str]
 
 
@@ -88,6 +90,38 @@ class OllamaClient:
             raise OllamaError("Ollama returned a chat response without message content.")
         return content.strip()
 
+    def chat_json(
+        self,
+        model: str,
+        messages: list[Message],
+        output: type[T],
+        *,
+        temperature: float = 0.2,
+        num_ctx: int = 8192,
+        attempts: int = 2,
+    ) -> T:
+        """Chat, constrained to `output`'s JSON schema, and parse the result.
+
+        Even with constrained decoding a small model can occasionally emit JSON
+        that is valid syntax but breaks a rule (an empty list, a bad enum). On
+        failure we retry once, showing the model its own error so it can fix it.
+        """
+        schema = output.model_json_schema()
+        convo = list(messages)
+        last_error = ""
+        for _ in range(attempts):
+            raw = self.chat(model, convo, schema=schema, temperature=temperature, num_ctx=num_ctx)
+            try:
+                return output.model_validate_json(raw)
+            except ValidationError as exc:
+                last_error = _short_validation_error(exc)
+                convo = [
+                    *messages,
+                    {"role": "assistant", "content": raw},
+                    {"role": "user", "content": f"That JSON was invalid: {last_error}. Reply again with corrected JSON only."},
+                ]
+        raise OllamaError(f"The model did not return valid structured output ({last_error}).")
+
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         """POST JSON and translate transport failures into Kuki's error types."""
         try:
@@ -109,3 +143,10 @@ def _error_text(res: httpx.Response) -> str:
         return str(res.json().get("error", ""))
     except ValueError:
         return res.text[:200]
+
+
+def _short_validation_error(exc: ValidationError) -> str:
+    """Summarise a pydantic error in one line the model can act on."""
+    first = exc.errors()[0]
+    where = ".".join(str(p) for p in first.get("loc", ())) or "root"
+    return f"{where}: {first.get('msg', 'invalid')}"
