@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
+import Courses from "./pages/Courses";
 import Library from "./pages/Library";
 import Progress from "./pages/Progress";
 import Review from "./pages/Review";
@@ -10,7 +11,6 @@ import { CardsPanel } from "./pages/doc/CardsPanel";
 import { PackPanel } from "./pages/doc/PackPanel";
 import { QuizPanel } from "./pages/doc/QuizPanel";
 import { SourcePanel } from "./pages/doc/SourcePanel";
-import { Placeholder } from "./pages/placeholders";
 
 const router = createBrowserRouter([
   {
@@ -33,7 +33,7 @@ const router = createBrowserRouter([
       },
       { path: "/review", element: <Review /> },
       { path: "/progress", element: <Progress /> },
-      { path: "/courses", element: <Placeholder name="Open courses" /> },
+      { path: "/courses", element: <Courses /> },
     ],
   },
 ]);
