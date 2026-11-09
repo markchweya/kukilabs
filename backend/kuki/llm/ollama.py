@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
+import time
+
 import httpx
 from pydantic import BaseModel, ValidationError
 
@@ -39,10 +41,15 @@ class ModelStatus:
         return any(name in (model, wanted) for name in self.installed)
 
 
+# Seconds to wait between retries when Ollama reports it is busy.
+_BUSY_BACKOFF = (1.0, 3.0)
+
+
 class OllamaClient:
     def __init__(self, host: str, timeout: float = 300, transport: httpx.BaseTransport | None = None):
         # A custom transport lets tests swap in httpx.MockTransport.
         self._http = httpx.Client(base_url=host, timeout=timeout, transport=transport)
+        self._sleep = time.sleep  # injectable so tests don't actually wait
 
     def close(self) -> None:
         self._http.close()
@@ -135,13 +142,22 @@ class OllamaClient:
         return vectors
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """POST JSON and translate transport failures into Kuki's error types."""
-        try:
-            res = self._http.post(path, json=payload)
-        except httpx.ConnectError as exc:
-            raise OllamaUnavailable("Ollama is not running. Start it with `ollama serve`.") from exc
-        except httpx.TimeoutException as exc:
-            raise OllamaError("The local model took too long to answer.") from exc
+        """POST JSON and translate transport failures into Kuki's error types.
+
+        Ollama answers 503 when its request queue is full (e.g. a study pack and
+        a quiz generating at once). That is worth waiting out with a short
+        backoff; a refused connection is not, because Ollama is simply off.
+        """
+        for delay in (*_BUSY_BACKOFF, None):
+            try:
+                res = self._http.post(path, json=payload)
+            except httpx.ConnectError as exc:
+                raise OllamaUnavailable("Ollama is not running. Start it with `ollama serve`.") from exc
+            except httpx.TimeoutException as exc:
+                raise OllamaError("The local model took too long to answer.") from exc
+            if res.status_code != 503 or delay is None:
+                break
+            self._sleep(delay)
         if res.status_code == 404:
             # Ollama uses 404 for "model not pulled".
             raise OllamaError(_error_text(res) or "Model not found. Pull it with `ollama pull`.")
