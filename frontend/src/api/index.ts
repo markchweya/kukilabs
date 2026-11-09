@@ -50,6 +50,7 @@ export const api = {
     stats: (docId?: string) => http.get<DeckStats>(`/api/flashcards/stats${docId ? `?document_id=${enc(docId)}` : ""}`),
     review: (cardId: number, button: ReviewButton) => http.post<Flashcard>(`/api/flashcards/${cardId}/review`, { button }),
     remove: (cardId: number) => http.del(`/api/flashcards/${cardId}`),
+    ankiUrl: (docId: string) => `/api/documents/${enc(docId)}/flashcards/anki.txt`,
   },
 
   insights: (docId?: string) => http.get<Insights>(`/api/insights${docId ? `?document_id=${enc(docId)}` : ""}`),

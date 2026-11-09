@@ -56,6 +56,7 @@ export function CardsPanel({ doc }: { doc: KukiDocument }) {
           {due.length ? `Review ${due.length} due card${due.length === 1 ? "" : "s"}` : "Nothing due right now"}
         </Button>
         <Button onClick={generate}>Add more cards</Button>
+        <a href={api.cards.ankiUrl(doc.id)} className="ml-auto font-bold text-whale-deep underline">Export to Anki</a>
       </div>
       <ul className="divide-y divide-line overflow-hidden rounded-3xl border border-line bg-paper">
         {cards.data.map((c) => (
