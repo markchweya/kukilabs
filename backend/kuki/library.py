@@ -6,6 +6,7 @@ layer and the study features never touch SQL for them directly.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
@@ -14,6 +15,11 @@ from pathlib import Path
 from kuki.config import Settings
 from kuki.db import transaction
 from kuki.ingest import ExtractionError, Segment, extract
+from kuki.llm import OllamaClient, OllamaError
+from kuki.search.hybrid import Hit, Passage, rank
+from kuki.search.vectors import from_blob, to_blob
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -127,3 +133,61 @@ class Library:
         return self.conn.execute(
             "SELECT id, ordinal, locator, text FROM segments WHERE document_id = ? ORDER BY ordinal", (doc_id,)
         ).fetchall()
+
+    # ---- embeddings and search ------------------------------------------
+
+    def embed_missing(self, llm: OllamaClient, doc_id: str | None = None) -> int:
+        """Embed segments that have no vector yet; return how many were embedded.
+
+        Safe to call any time: if the embedding model is missing or Ollama is
+        off, it logs and returns 0, and search keeps working on keywords. It is
+        called after every ingest and again on startup, so documents added
+        while offline get embedded later automatically.
+        """
+        query = "SELECT id, text FROM segments WHERE embedding IS NULL"
+        params: tuple = ()
+        if doc_id is not None:
+            query += " AND document_id = ?"
+            params = (doc_id,)
+        rows = self.conn.execute(query, params).fetchall()
+        if not rows:
+            return 0
+        try:
+            vectors = llm.embed(self.settings.embed_model, [r["text"] for r in rows])
+        except OllamaError as exc:
+            log.info("Skipping embeddings (%s); keyword search still works.", exc)
+            return 0
+        with transaction(self.conn):
+            self.conn.executemany(
+                "UPDATE segments SET embedding = ? WHERE id = ?",
+                [(to_blob(v), r["id"]) for v, r in zip(vectors, rows)],
+            )
+        return len(rows)
+
+    def passages(self, document_ids: list[str] | None = None) -> list[Passage]:
+        """All searchable passages, optionally limited to some documents."""
+        sql = (
+            "SELECT s.id, s.document_id, d.title, s.locator, s.text, s.embedding"
+            " FROM segments s JOIN documents d ON d.id = s.document_id WHERE d.status = 'ready'"
+        )
+        params: list[str] = []
+        if document_ids:
+            sql += f" AND s.document_id IN ({','.join('?' * len(document_ids))})"
+            params = list(document_ids)
+        sql += " ORDER BY d.created_at, s.document_id, s.ordinal"
+        return [
+            Passage(r[0], r[1], r[2], r[3], r[4], from_blob(r[5]) if r[5] is not None else None)
+            for r in self.conn.execute(sql, params)
+        ]
+
+    def search(
+        self, query: str, llm: OllamaClient | None, document_ids: list[str] | None = None, k: int = 6
+    ) -> list[Hit]:
+        passages = self.passages(document_ids)
+        query_vector = None
+        if llm is not None and any(p.embedding is not None for p in passages):
+            try:
+                query_vector = llm.embed(self.settings.embed_model, [query])[0]
+            except OllamaError as exc:
+                log.info("Query embedding failed (%s); using keyword search.", exc)
+        return rank(passages, query, query_vector, k=k)
