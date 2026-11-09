@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -11,14 +12,28 @@ from kuki.library import Library
 from kuki.llm import OllamaClient, OllamaError
 from kuki.study import prompts
 from kuki.study.sources import Citation, SourceSet
+from kuki.study.text import clean
 
 log = logging.getLogger(__name__)
 
 
 class AnswerDraft(BaseModel):
-    found: bool = Field(description="True only if the sources contain the answer")
+    # Order matters: the model writes its answer before deciding `found`. With
+    # `found` first, a real 3B model set it true and then wrote "the sources
+    # do not mention this".
     answer: str
     sources: list[str]
+    found: bool = Field(description="True only if the sources contain the answer")
+
+
+# Phrases a model uses when the notes don't have the answer, as a backstop
+# for an inconsistent `found` flag.
+_NOT_FOUND = re.compile(
+    r"(not (explicitly )?(mentioned|stated|covered|provided|included|given)|"
+    r"(do|does) not (mention|say|provide|include|cover|contain)|"
+    r"no information (about|on)|isn't in (the|your) (sources|notes)|not in (the|your) (sources|notes))",
+    re.I,
+)
 
 
 class Answer(BaseModel):
@@ -47,9 +62,16 @@ def ask(library: Library, llm: OllamaClient, question: str, document_ids: list[s
             num_ctx=library.settings.num_ctx,
         )
         citations = sources.resolve(draft.sources)
-        # An answer that claims to be found but cites nothing is not trustworthy.
-        found = draft.found and bool(citations)
-        return Answer(question=question, answer=draft.answer, found=found, citations=citations, mode="ai")
+        # An answer that claims to be found but cites nothing, or that says the
+        # notes don't cover it, is not a found answer.
+        found = draft.found and bool(citations) and not _NOT_FOUND.search(draft.answer)
+        return Answer(
+            question=question,
+            answer=clean(draft.answer),
+            found=found,
+            citations=citations if found else [],
+            mode="ai",
+        )
     except OllamaError as exc:
         log.info("AI answer failed (%s); returning best passages.", exc)
         top = sources.resolve(list(sources.by_tag)[:3])

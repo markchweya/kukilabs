@@ -42,3 +42,14 @@ def test_offline_returns_passages(setup):
 def test_nothing_relevant(setup):
     library, _fake, llm = setup
     assert ask(library, llm, "photosynthesis").found is False
+
+
+def test_answer_saying_not_in_notes_is_not_found(setup):
+    # Real Llama 3.2 3B output: found=true with this text.
+    library, fake, llm = setup
+    fake.respond("AnswerDraft", {
+        "answer": "The inventor of stacks is not explicitly mentioned in the sources.",
+        "sources": ["S1"], "found": True,
+    })
+    ans = ask(library, llm, "who invented the stack?")
+    assert ans.found is False and ans.citations == []
