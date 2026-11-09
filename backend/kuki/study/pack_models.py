@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from kuki.study.sources import Citation
 
@@ -61,6 +61,7 @@ class PackSummaryDraft(BaseModel):
 class Cited(BaseModel):
     citations: list[Citation]
 
+    @computed_field  # included in API JSON so the UI can flag unsupported claims
     @property
     def grounded(self) -> bool:
         return bool(self.citations)
