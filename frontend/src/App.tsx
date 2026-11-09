@@ -1,7 +1,10 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { SourceProvider } from "./components/sources";
+import DocumentPage from "./pages/Document";
 import Library from "./pages/Library";
+import { PackPanel } from "./pages/doc/PackPanel";
+import { SourcePanel } from "./pages/doc/SourcePanel";
 import { Placeholder } from "./pages/placeholders";
 
 const router = createBrowserRouter([
@@ -9,7 +12,20 @@ const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { path: "/", element: <Library /> },
-      { path: "/doc/:id/:tab?", element: <Placeholder name="Document" /> },
+      {
+        path: "/doc/:id/:tab?",
+        element: (
+          <DocumentPage
+            panels={{
+              pack: (d) => <PackPanel doc={d} />,
+              quiz: () => <Placeholder name="Quiz" />,
+              cards: () => <Placeholder name="Flashcards" />,
+              ask: () => <Placeholder name="Ask" />,
+              source: (d) => <SourcePanel doc={d} />,
+            }}
+          />
+        ),
+      },
       { path: "/review", element: <Placeholder name="Review" /> },
       { path: "/progress", element: <Placeholder name="Weak spots" /> },
       { path: "/courses", element: <Placeholder name="Open courses" /> },
