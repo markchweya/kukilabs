@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { KukiDocument } from "../api";
 import { KIND_LABEL, partsLabel } from "../lib/format";
+import { KindIcon } from "./KindIcon";
 import { Spinner } from "./ui";
 
 export function DocumentList({ docs }: { docs: KukiDocument[] }) {
@@ -33,8 +34,8 @@ export function DocumentList({ docs }: { docs: KukiDocument[] }) {
 function KindBadge({ doc }: { doc: KukiDocument }) {
   const tone = doc.status === "failed" ? "bg-blush-wash text-blush" : doc.kind === "web" ? "bg-sea-wash text-sea" : "bg-whale-wash text-whale-deep";
   return (
-    <span aria-hidden className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl font-display text-sm font-bold ${tone}`}>
-      {KIND_LABEL[doc.kind].slice(0, 2)}
+    <span aria-hidden className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${tone}`}>
+      <KindIcon kind={doc.kind} className="h-6 w-6" />
     </span>
   );
 }
