@@ -57,7 +57,7 @@ Word documents, photos of notes and lecture recordings, and turns them into:
   recall quizzes and keyword-graded feedback, and says so.
 
 Stack: Python 3.11+, FastAPI, SQLite, NumPy, pypdf, python-pptx, python-docx,
-React 19, TypeScript, Vite, Tailwind CSS v4. 120+ backend tests run in CI
+React 19, TypeScript, Vite, Tailwind CSS v4. Over 100 backend tests run in CI
 against an in-process fake of the Ollama API.
 
 ## Responsible AI
