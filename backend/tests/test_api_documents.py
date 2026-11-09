@@ -78,3 +78,11 @@ def test_offline_recording_endpoints(settings, monkeypatch):
     res = client.get(f"/api/documents/{doc['id']}/audio")
     assert res.status_code == 200 and res.content == b"ID3data"
     assert res.headers["content-type"] == "audio/mpeg"
+
+
+def test_rename(settings):
+    client, _ = make_client(settings)
+    doc = upload_notes(client)
+    renamed = client.patch(f"/api/documents/{doc['id']}", json={"title": "  Week 4:   Search  "}).json()
+    assert renamed["title"] == "Week 4: Search"
+    assert client.patch(f"/api/documents/{doc['id']}", json={"title": "   "}).status_code == 422

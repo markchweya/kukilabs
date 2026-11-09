@@ -86,6 +86,15 @@ class Library:
             raise NotFound(f"No document with id {doc_id}")
         return Document(**dict(row))
 
+    def rename_document(self, doc_id: str, title: str) -> Document:
+        title = " ".join(title.split())[:200]
+        if not title:
+            raise ValueError("A title can't be empty.")
+        self.get_document(doc_id)
+        with transaction(self.conn):
+            self.conn.execute("UPDATE documents SET title = ? WHERE id = ?", (title, doc_id))
+        return self.get_document(doc_id)
+
     def delete_document(self, doc_id: str) -> None:
         self.get_document(doc_id)  # raises NotFound
         with transaction(self.conn):

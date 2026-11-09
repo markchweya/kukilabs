@@ -108,6 +108,15 @@ def get_document(doc_id: str, library: Library = Depends(get_library)) -> Docume
     return DocumentOut.of(library.get_document(doc_id), library)
 
 
+class RenameRequest(BaseModel):
+    title: str
+
+
+@router.patch("/{doc_id}", response_model=DocumentOut)
+def rename_document(doc_id: str, body: RenameRequest, library: Library = Depends(get_library)) -> DocumentOut:
+    return DocumentOut.of(library.rename_document(doc_id, body.title), library)
+
+
 @router.get("/{doc_id}/segments", response_model=list[SegmentOut])
 def get_segments(doc_id: str, library: Library = Depends(get_library)) -> list[SegmentOut]:
     return [SegmentOut(**dict(r)) for r in library.segments(doc_id)]
