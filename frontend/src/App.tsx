@@ -4,6 +4,7 @@ import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
 import Library from "./pages/Library";
 import { PackPanel } from "./pages/doc/PackPanel";
+import { QuizPanel } from "./pages/doc/QuizPanel";
 import { SourcePanel } from "./pages/doc/SourcePanel";
 import { Placeholder } from "./pages/placeholders";
 
@@ -18,7 +19,7 @@ const router = createBrowserRouter([
           <DocumentPage
             panels={{
               pack: (d) => <PackPanel doc={d} />,
-              quiz: () => <Placeholder name="Quiz" />,
+              quiz: (d) => <QuizPanel doc={d} />,
               cards: () => <Placeholder name="Flashcards" />,
               ask: () => <Placeholder name="Ask" />,
               source: (d) => <SourcePanel doc={d} />,
