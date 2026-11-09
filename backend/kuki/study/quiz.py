@@ -18,7 +18,7 @@ from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
 from kuki.study.quiz_models import ClaimCheck, ContradictionCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
-from kuki.study.text import clean
+from kuki.study.text import clean, strip_source_tags
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ def generate_quiz(library: Library, llm: OllamaClient, doc_id: str, count: int =
         rows = [
             (
                 short_concept(q.concept),
-                clean(q.question),
-                clean(q.ideal_answer),
+                strip_source_tags(q.question),
+                strip_source_tags(q.ideal_answer),
                 [clean(k) for k in q.key_ideas if clean(k)],
                 sources.resolve(q.sources, f"{q.question} {q.ideal_answer}"),
             )

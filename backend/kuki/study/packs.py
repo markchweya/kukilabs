@@ -29,7 +29,7 @@ from kuki.study.pack_models import (
     StudyPackDraft,
 )
 from kuki.study.sources import SourceSet, batch_by_size
-from kuki.study.text import clean
+from kuki.study.text import strip_source_tags as clean
 
 log = logging.getLogger(__name__)
 

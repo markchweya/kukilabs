@@ -16,7 +16,7 @@ from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.study.quiz import spread_sample
 from kuki.study.sources import Citation, SourceSet
-from kuki.study.text import clean
+from kuki.study.text import strip_source_tags as clean
 from kuki.study.srs import BUTTONS, CardState, next_due, review
 
 log = logging.getLogger(__name__)

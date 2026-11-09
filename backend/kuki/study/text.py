@@ -26,3 +26,12 @@ def clean(text: str) -> str:
     if len(text) >= 2 and _PAIRS.get(text[0]) == text[-1]:
         text = text[1:-1]
     return re.sub(r"\s+([.,;:!?])", r"\1", text).strip()
+
+
+# "(Source: [S7] and [S8])", "[S3]", "(S1, S2)": source tags meant for us, not the student.
+_SOURCE_TAGS = re.compile(r"\s*\((?:sources?:\s*)?(?:\[?S\d+\]?(?:\s*(?:,|and|&)\s*)?)+\)|\s*\[S\d+\]", re.I)
+
+
+def strip_source_tags(text: str) -> str:
+    """Remove internal source tags a model copied into student-facing text."""
+    return clean(_SOURCE_TAGS.sub("", text))
