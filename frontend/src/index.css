@@ -21,7 +21,7 @@
   --whale: #4f7fe0;
   --whale-deep: #2f5bc2;
   --whale-wash: #e3ecfd;
-  --stitch: #b9c9ea;
+  --stitch: #9fb5e3;
   --sea: #0f9f8f;
   --sea-wash: #ddf4f0;
   --blush: #e86a86;
@@ -103,7 +103,19 @@ h1, h2, h3 {
  * with no source never gets a stitch.
  */
 .stitched {
-  border: 1.5px dashed var(--stitch);
+  /* An inset dashed outline reads as a real seam: stitched a little in from
+     the edge, the way the plushie's belly panel is sewn on. */
+  outline: 2px dashed var(--stitch);
+  outline-offset: -7px;
+}
+.stitched-sm {
+  outline: 1.5px dashed var(--stitch);
+  outline-offset: -3px;
+}
+.stitched:focus-visible,
+.stitched-sm:focus-visible {
+  outline: 2.5px solid var(--whale);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -38,7 +38,7 @@ export function Citations({ items, ungroundedLabel = "Not from your notes" }: { 
           type="button"
           onClick={() => openSource(c)}
           title={c.excerpt}
-          className="stitched rounded-full bg-belly px-2.5 py-0.5 text-xs text-ink-soft transition-colors hover:border-whale hover:text-ink"
+          className="stitched-sm rounded-full bg-belly px-3 py-1 text-xs text-ink-soft transition-colors hover:bg-whale-wash hover:text-ink"
         >
           {c.locator}
         </button>

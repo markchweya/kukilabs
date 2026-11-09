@@ -38,10 +38,16 @@ export function DropZone({ onUploaded }: { onUploaded: (doc: KukiDocument) => vo
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files); }}
-        className={`stitched flex cursor-pointer flex-col items-center gap-2 rounded-[2rem] px-6 py-10 text-center transition-colors sm:py-14 ${
-          dragging ? "border-whale bg-whale-wash" : "bg-paper hover:border-whale"
+        className={`stitched relative flex cursor-pointer flex-col items-center gap-2 rounded-[2rem] px-6 py-10 text-center transition-colors sm:py-14 ${
+          dragging ? "bg-whale-wash" : "bg-paper hover:bg-belly"
         }`}
       >
+        {/* Kuki peeks over the edge, waiting for a lecture. */}
+        <img
+          src="/kuki.svg"
+          alt=""
+          className={`pointer-events-none absolute -top-14 right-6 h-24 w-24 transition-transform sm:right-12 sm:h-28 sm:w-28 ${dragging ? "-translate-y-2 rotate-6" : ""}`}
+        />
         <p className="font-display text-2xl font-semibold">
           {uploading.length ? `Reading ${uploading.length === 1 ? uploading[0] : `${uploading.length} files`}…` : "Drop your lecture here"}
         </p>
