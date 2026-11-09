@@ -424,9 +424,26 @@ def tidy_correction(text: str, max_sentences: int = 2) -> str:
 
 def _split_both(claim: str) -> list[str]:
     m = _BOTH.match(claim)
-    if not m:
+    # "BFS and DFS are both complete": the regex would read "DFS are" as a subject.
+    if not m or m["b"].split()[-1].lower() in _LINKING_VERBS:
         return [claim]
-    return [f"{m['a']} {m['rest']}", f"{m['b']} {m['rest']}"]
+    rest = _singular_verb(m["rest"])
+    return [f"{m['a']} {rest}", f"{m['b']} {rest}"]
+
+
+_IRREGULAR = {"are": "is", "have": "has", "do": "does", "go": "goes"}
+_LINKING_VERBS = {"is", "are", "was", "were", "be", "can", "could", "will", "would", "should", "must", "may", "might", "do", "does", "have", "has"}
+
+
+def _singular_verb(predicate: str) -> str:
+    """'use a queue' -> 'uses a queue', so a split claim reads naturally."""
+    verb, _, tail = predicate.partition(" ")
+    lower = verb.lower()
+    if lower in _IRREGULAR:
+        verb = _IRREGULAR[lower]
+    elif lower.isalpha() and not lower.endswith("s"):
+        verb += "es" if lower.endswith(("sh", "ch", "x", "z")) else "s"
+    return f"{verb} {tail}".strip()
 
 
 def _lower_first(text: str) -> str:

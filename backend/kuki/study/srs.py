@@ -18,6 +18,7 @@ MIN_EASE = 1.3
 START_EASE = 2.5
 
 BUTTONS = {"again": 1, "hard": 3, "good": 4, "easy": 5}
+EASY_FIRST_INTERVAL = 4  # days
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,9 @@ def review(state: CardState, grade: int) -> CardState:
         )
 
     if state.repetitions == 0:
-        interval = 1
+        # New card: "Easy" means it's already known, so skip ahead (as Anki
+        # does) instead of every button saying "tomorrow".
+        interval = EASY_FIRST_INTERVAL if grade == 5 else 1
     elif state.repetitions == 1:
         interval = 6
     else:

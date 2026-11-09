@@ -41,3 +41,8 @@ def test_bad_grade_and_due_date():
     with pytest.raises(ValueError):
         review(CardState(), 6)
     assert next_due(CardState(interval_days=6), datetime(2026, 11, 1)) == datetime(2026, 11, 7)
+
+
+def test_easy_on_a_new_card_skips_ahead():
+    assert review(CardState(), BUTTONS["easy"]).interval_days == 4
+    assert review(CardState(), BUTTONS["good"]).interval_days == 1

@@ -139,8 +139,9 @@ def test_split_claims():
     assert split_claims("BFS and DFS explore a graph.") == ["BFS and DFS explore a graph"]  # no split on plain "and"
     assert split_claims("   ") == []
     # Half-right compound claims are judged one half at a time.
-    assert split_claims("BFS and DFS both use a queue.") == ["BFS use a queue", "DFS use a queue"]
-    assert split_claims("Greedy search and A* each use a heuristic") == ["Greedy search use a heuristic", "A* use a heuristic"]
+    assert split_claims("BFS and DFS both use a queue.") == ["BFS uses a queue", "DFS uses a queue"]
+    assert split_claims("Greedy search and A* each use a heuristic") == ["Greedy search uses a heuristic", "A* uses a heuristic"]
+    assert split_claims("BFS and DFS are both complete") == ["BFS and DFS are both complete"]  # "both" after the verb: left alone
 
 
 def test_contradiction_is_named_with_the_correction():
