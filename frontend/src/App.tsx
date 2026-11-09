@@ -1,5 +1,6 @@
 import { createBrowserRouter, Link, RouterProvider } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Empty } from "./components/ui";
 import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
@@ -45,8 +46,10 @@ const router = createBrowserRouter([
 
 export default function App() {
   return (
-    <SourceProvider>
-      <RouterProvider router={router} />
-    </SourceProvider>
+    <ErrorBoundary>
+      <SourceProvider>
+        <RouterProvider router={router} />
+      </SourceProvider>
+    </ErrorBoundary>
   );
 }
