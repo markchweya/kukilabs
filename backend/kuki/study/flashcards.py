@@ -97,3 +97,75 @@ def generate_cards(library: Library, llm: OllamaClient, doc_id: str, count: int 
             )
             created.append(cur.lastrowid)
     return [get_card(library, cid) for cid in created]
+
+
+# ---- reading and reviewing -------------------------------------------------
+
+_CARD_COLUMNS = "id, document_id, front, back, citations, due_at, interval_days, repetitions, lapses"
+
+
+def _to_card(row) -> Flashcard:
+    data = dict(row)
+    data["citations"] = json.loads(data["citations"])
+    return Flashcard(**data)
+
+
+def get_card(library: Library, card_id: int) -> Flashcard:
+    row = library.conn.execute(f"SELECT {_CARD_COLUMNS} FROM flashcards WHERE id = ?", (card_id,)).fetchone()
+    if row is None:
+        raise NotFound(f"No flashcard with id {card_id}")
+    return _to_card(row)
+
+
+def due_cards(library: Library, document_id: str | None = None, limit: int = 20) -> list[Flashcard]:
+    """Cards due now, most overdue first. New cards count as due."""
+    sql = f"SELECT {_CARD_COLUMNS} FROM flashcards WHERE due_at <= ?"
+    params: list = [_now().strftime(SQL_TIME)]
+    if document_id:
+        sql += " AND document_id = ?"
+        params.append(document_id)
+    sql += " ORDER BY due_at, id LIMIT ?"
+    params.append(limit)
+    return [_to_card(r) for r in library.conn.execute(sql, params)]
+
+
+def all_cards(library: Library, document_id: str) -> list[Flashcard]:
+    rows = library.conn.execute(
+        f"SELECT {_CARD_COLUMNS} FROM flashcards WHERE document_id = ? ORDER BY id", (document_id,)
+    )
+    return [_to_card(r) for r in rows]
+
+
+def review_card(library: Library, card_id: int, button: str) -> Flashcard:
+    """Apply an Again/Hard/Good/Easy review and reschedule the card."""
+    if button not in BUTTONS:
+        raise ValueError(f"button must be one of {', '.join(BUTTONS)}")
+    row = library.conn.execute(
+        "SELECT ease, interval_days, repetitions, lapses FROM flashcards WHERE id = ?", (card_id,)
+    ).fetchone()
+    if row is None:
+        raise NotFound(f"No flashcard with id {card_id}")
+
+    state = review(CardState(*row), BUTTONS[button])
+    due = next_due(state, _now()).strftime(SQL_TIME)
+    with transaction(library.conn):
+        library.conn.execute(
+            "UPDATE flashcards SET ease = ?, interval_days = ?, repetitions = ?, lapses = ?, due_at = ? WHERE id = ?",
+            (state.ease, state.interval_days, state.repetitions, state.lapses, due, card_id),
+        )
+        library.conn.execute("INSERT INTO reviews(card_id, grade) VALUES (?, ?)", (card_id, BUTTONS[button]))
+    return get_card(library, card_id)
+
+
+def deck_stats(library: Library, document_id: str | None = None) -> DeckStats:
+    where, params = ("WHERE document_id = ?", [document_id]) if document_id else ("", [])
+    total, learned = library.conn.execute(
+        f"SELECT COUNT(*), COALESCE(SUM(repetitions > 0), 0) FROM flashcards {where}", params
+    ).fetchone()
+    return DeckStats(total=total, due_now=len(due_cards(library, document_id, limit=10_000)), learned=learned)
+
+
+def delete_card(library: Library, card_id: int) -> None:
+    get_card(library, card_id)
+    with transaction(library.conn):
+        library.conn.execute("DELETE FROM flashcards WHERE id = ?", (card_id,))
