@@ -4,11 +4,12 @@
 import type { Flashcard, ReviewButton } from "../api";
 
 const GRADES: Record<ReviewButton, number> = { again: 1, hard: 3, good: 4, easy: 5 };
+const EASY_FIRST_INTERVAL = 4; // days, matches EASY_FIRST_INTERVAL in srs.py
 
 export function previewInterval(card: Pick<Flashcard, "interval_days" | "repetitions">, ease: number, button: ReviewButton): number {
   const grade = GRADES[button];
   if (grade < 3) return 1;
-  if (card.repetitions === 0) return 1;
+  if (card.repetitions === 0) return button === "easy" ? EASY_FIRST_INTERVAL : 1;
   if (card.repetitions === 1) return 6;
   return Math.max(1, Math.round(card.interval_days * ease));
 }

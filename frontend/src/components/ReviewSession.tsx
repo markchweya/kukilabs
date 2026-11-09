@@ -81,7 +81,10 @@ export function ReviewSession({ cards, onFinished }: { cards: Flashcard[]; onFin
             className="rounded-2xl border border-line bg-paper px-2 py-3 transition-colors hover:border-whale disabled:opacity-40"
           >
             <span className={`block font-bold ${b.tone}`}>{b.label}</span>
-            <span className="block text-xs text-ink-soft">{intervalLabel(previewInterval(card, card.ease, b.id))}</span>
+            <span className="block text-xs text-ink-soft">
+              {/* "Again" re-queues the card in this session before it is rescheduled. */}
+              {b.id === "again" ? "again now" : intervalLabel(previewInterval(card, card.ease, b.id))}
+            </span>
           </button>
         ))}
       </div>
