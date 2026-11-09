@@ -11,13 +11,19 @@ export function CardsPanel({ doc }: { doc: KukiDocument }) {
   const [generating, setGenerating] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function generate() {
     setGenerating(true);
     setError(null);
+    setNotice(null);
     try {
       const created = await api.cards.generate(doc.id, 12);
-      if (created.length === 0) setError("No new cards: everything Kuki found is already in this deck.");
+      setNotice(
+        created.length === 0
+          ? "No new cards: everything Kuki found is already in this deck."
+          : `Added ${created.length} card${created.length === 1 ? "" : "s"}.`,
+      );
       await cards.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -51,6 +57,7 @@ export function CardsPanel({ doc }: { doc: KukiDocument }) {
   return (
     <div className="space-y-5">
       {error && <ErrorNote message={error} />}
+      {notice && <p role="status" className="rounded-2xl bg-sea-wash px-4 py-3 text-sm">{notice}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" disabled={due.length === 0} onClick={() => setReviewing(true)}>
           {due.length ? `Review ${due.length} due card${due.length === 1 ? "" : "s"}` : "Nothing due right now"}
