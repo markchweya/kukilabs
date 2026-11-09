@@ -9,9 +9,9 @@ QUIZ = {"questions": [{
 }]}
 
 GRADE = {
-    "claims": [
-        {"claim": "it uses the heuristic", "status": "supported", "correction": ""},
-        {"claim": "it only uses the heuristic", "status": "contradicted", "correction": "A* also adds the path cost g(n)."},
+    "checks": [
+        {"status": "supported", "correction": ""},
+        {"status": "contradicted", "correction": "A* also adds the path cost g(n)."},
     ],
     "missing_ideas": ["f = g + h"],
     "misconception_type": "confused_concepts",
@@ -30,7 +30,7 @@ def test_quiz_flow_and_insights(settings):
     assert questions[0]["concept"] == "A*" and "ideal_answer" not in questions[0]
     assert client.get(f"/api/documents/{doc['id']}/quiz").json() == questions
 
-    grade = client.post(f"/api/questions/{questions[0]['id']}/answer", json={"answer": "it only uses the heuristic"}).json()
+    grade = client.post(f"/api/questions/{questions[0]['id']}/answer", json={"answer": "It uses the heuristic. It only uses the heuristic."}).json()
     assert grade["misconception_type"] == "confused_concepts"
     assert grade["ideal_answer"].startswith("It expands")
 

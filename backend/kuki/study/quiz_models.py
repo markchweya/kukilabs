@@ -39,9 +39,9 @@ class QuizDraft(BaseModel):
 
 
 class ClaimCheck(BaseModel):
-    claim: str = Field(description="One thing the student said, quoted or closely paraphrased from THEIR answer")
     status: Literal["supported", "contradicted", "not_in_notes"] = Field(
-        description="supported: the lecture agrees. contradicted: the lecture says otherwise. not_in_notes: the lecture doesn't say"
+        description="supported: the lecture says the same thing, even in other words. "
+        "contradicted: the lecture says something different. not_in_notes: the lecture doesn't cover it"
     )
     correction: str = Field(description="If contradicted: what the lecture actually says. Otherwise empty")
 
@@ -49,14 +49,14 @@ class ClaimCheck(BaseModel):
 class GradeDraft(BaseModel):
     """What the model writes when grading.
 
-    Field order matters: constrained decoding writes fields in schema order,
-    so the model checks each claim against the lecture *before* it picks a
-    misconception type. The verdict and score are then computed in code from
-    these checks (see quiz.aggregate_grade), because a 3B model's holistic
-    scores proved unreliable in testing while its per-claim checks were good.
+    The student's answer is split into numbered claims *in code* (a real 3B
+    model would not split it, and judged the whole answer as one claim). The
+    model only classifies each numbered claim, in order. Field order matters:
+    constrained decoding writes the checks before the misconception type.
+    The verdict and score are then computed in code (quiz.aggregate_grade).
     """
 
-    claims: list[ClaimCheck]
+    checks: list[ClaimCheck] = Field(description="One check per numbered claim, in the same order")
     missing_ideas: list[str] = Field(description="Key ideas from the list that the answer does not cover, copied exactly")
     misconception_type: MisconceptionType
     nudge: str = Field(description="One guiding question that helps the student find the fix themselves")

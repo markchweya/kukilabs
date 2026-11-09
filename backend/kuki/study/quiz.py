@@ -144,19 +144,20 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
     key_ideas: list[str] = json.loads(row["key_ideas"])
     citations = [Citation.model_validate(c) for c in json.loads(row["citations"])]
     source_text = _cited_text(library, citations)
+    claims = split_claims(answer)
 
     try:
         draft = llm.chat_json(
             library.settings.chat_model,
             [
                 {"role": "system", "content": prompts.TUTOR},
-                {"role": "user", "content": prompts.grade(row["prompt"], row["ideal_answer"], key_ideas, source_text, answer)},
+                {"role": "user", "content": prompts.grade(row["prompt"], row["ideal_answer"], key_ideas, source_text, answer, claims)},
             ],
             GradeDraft,
             temperature=0.1,  # grading should be consistent, not creative
             num_ctx=library.settings.num_ctx,
         )
-        result = aggregate_grade(draft, answer, key_ideas)
+        result = aggregate_grade(draft, claims, key_ideas)
         mode = "ai"
     except OllamaError as exc:
         log.info("AI grading failed (%s); using keyword overlap.", exc)
@@ -184,23 +185,28 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
 CONTRADICTION_PENALTY = 30
 
 
-def aggregate_grade(draft: GradeDraft, answer: str, key_ideas: list[str]) -> GradeResult:
+def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) -> GradeResult:
     """Turn per-claim checks into a verdict, score and feedback, in code.
 
     Guards against what a real 3B model did in testing:
-    * praising things the student never said -> a claim only counts if it
-      overlaps the student's own words;
+    * praising things the student never said -> claims come from the
+      student's own answer (split in code), never from the model;
     * flagging a correct statement as a misconception -> a misconception now
       requires a claim the model marked as contradicted by the lecture;
     * inconsistent scores -> the score is computed from key-idea coverage
       and contradictions, not chosen by the model.
     """
-    claims = [c for c in draft.claims if clean(c.claim) and _said_by_student(c.claim, answer)]
-    supported = [c for c in claims if c.status == "supported"]
-    contradicted = [c for c in claims if c.status == "contradicted"]
+    # A model may return more or fewer checks than claims; pair what lines up.
+    pairs = list(zip(claims, draft.checks))
+    supported = [c for c, chk in pairs if chk.status == "supported"]
+    contradicted = [(c, chk) for c, chk in pairs if chk.status == "contradicted"]
     wanted = {_norm(k): k for k in key_ideas}
     missing = [wanted[_norm(m)] for m in draft.missing_ideas if _norm(m) in wanted]
-    missing = list(dict.fromkeys(missing))  # de-duplicate, keep order
+    # Backstop: a 3B model listed "BFS uses a FIFO queue" as missing from an
+    # answer that said exactly that. An idea whose words are all in the answer
+    # is not missing.
+    answer_terms = set(tokenize(" ".join(claims)))
+    missing = [m for m in dict.fromkeys(missing) if not _covered(m, answer_terms)]
 
     coverage = (len(key_ideas) - len(missing)) / len(key_ideas) if key_ideas else (1.0 if supported else 0.0)
     score = round(100 * coverage) - CONTRADICTION_PENALTY * len(contradicted)
@@ -209,9 +215,9 @@ def aggregate_grade(draft: GradeDraft, answer: str, key_ideas: list[str]) -> Gra
     score = max(0, min(100, score))
 
     if contradicted:
-        first = contradicted[0]
-        correction = clean(first.correction) or "the lecture says otherwise"
-        misconception = f"You said “{clean(first.claim)}”, but {_lower_first(correction)}"
+        claim, check = contradicted[0]
+        correction = tidy_correction(check.correction) or "the lecture says otherwise"
+        misconception = f"You said “{claim}”, but {_lower_first(correction)}"
         kind = draft.misconception_type if draft.misconception_type in ("confused_concepts", "factual_error", "overgeneralization") else "factual_error"
     elif missing:
         misconception = "Your answer leaves out: " + "; ".join(missing)
@@ -229,12 +235,59 @@ def aggregate_grade(draft: GradeDraft, answer: str, key_ideas: list[str]) -> Gra
     return GradeResult(
         verdict=verdict,
         score=score,
-        got_right=[clean(c.claim) for c in supported],
+        got_right=supported,
         misconception=misconception,
         misconception_type=kind,
         nudge="" if verdict == "correct" else clean(draft.nudge),
         explanation=clean(draft.explanation),
     )
+
+
+# Split only at sentence ends and semicolons. Splitting on "and", "but" or
+# "because" leaves fragments with no subject ("may return a longer path").
+_CLAIM_SPLIT = re.compile(r"(?<=[.!?])\s+|;\s*")
+MAX_CLAIMS = 8
+
+
+def split_claims(answer: str) -> list[str]:
+    """Split a student's answer into short statements the grader can check one by one."""
+    parts = [clean(p).rstrip(".;!?") for p in _CLAIM_SPLIT.split(answer) if p and p.strip()]
+    claims: list[str] = []
+    carry = ""
+    for part in parts:
+        if not part:
+            continue
+        # Fragments under three words ("Yes", "So") join a neighbouring claim.
+        if len(part.split()) < 3:
+            if claims:
+                claims[-1] = f"{claims[-1]}, {part[0].lower() + part[1:]}"
+            else:
+                carry = f"{carry} {part}".strip()
+            continue
+        claims.append(f"{carry}, {part}" if carry else part)
+        carry = ""
+    if carry:
+        claims.append(carry)
+    if len(claims) > MAX_CLAIMS:
+        claims = claims[: MAX_CLAIMS - 1] + [" ".join(claims[MAX_CLAIMS - 1 :])]
+    return claims
+
+
+def _covered(idea: str, answer_terms: set[str], threshold: float = 0.8) -> bool:
+    terms = set(tokenize(idea))
+    return bool(terms) and len(terms & answer_terms) / len(terms) >= threshold
+
+
+_SOURCE_NOTE = re.compile(r"\s*\((?:lecture )?sources?:[^)]*\)\s*", re.I)
+
+
+def tidy_correction(text: str, max_sentences: int = 2) -> str:
+    """Normalise a model-written correction: no placeholders, no source notes, two sentences at most."""
+    text = _SOURCE_NOTE.sub(" ", clean(text)).strip()
+    if text.lower().rstrip(".") in {"", "none", "n/a", "na", "null"}:
+        return ""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    return " ".join(sentences[:max_sentences]).strip()
 
 
 def _lower_first(text: str) -> str:
@@ -247,18 +300,6 @@ def _lower_first(text: str) -> str:
 
 def _norm(text: str) -> str:
     return " ".join(tokenize(text))
-
-
-def _said_by_student(claim: str, answer: str, threshold: float = 0.75) -> bool:
-    """True if nearly all of the claim's words appear in the student's answer.
-
-    Strict on purpose: "DFS uses a stack" must not pass against an answer that
-    only shares "DFS uses" with it.
-    """
-    claim_terms = set(tokenize(claim))
-    if not claim_terms:
-        return False
-    return len(claim_terms & set(tokenize(answer))) / len(claim_terms) >= threshold
 
 
 def _cited_text(library: Library, citations: list[Citation]) -> str:

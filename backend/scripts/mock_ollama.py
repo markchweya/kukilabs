@@ -58,13 +58,11 @@ def answer(title: str, prompt: str) -> dict:
             "sources": [t],
         } for t, _, b in src[:5]]}
     if title == "GradeDraft":
-        # Treat the student's first sentence as one supported claim and report
-        # every key idea after the first as missing.
-        answer = re.search(r'"""(.*?)"""', prompt, re.S)
-        said = first_sentence(answer.group(1)) if answer else ""
+        # Mark every claim supported and every key idea after the first missing.
+        claims = re.findall(r"^\d+\. (.+)$", prompt.split("CLAIMS TO CHECK")[-1].split("Steps:")[0], re.M)
         ideas = re.findall(r"^- (.+)$", prompt.split("KEY IDEAS:")[-1].split("LECTURE SOURCES:")[0], re.M)
         return {
-            "claims": [{"claim": said, "status": "supported", "correction": ""}] if said else [],
+            "checks": [{"status": "supported", "correction": ""} for _ in claims],
             "missing_ideas": ideas[1:],
             "misconception_type": "missing_step",
             "nudge": "(Mock) What happens in the step between the input and the result?",
