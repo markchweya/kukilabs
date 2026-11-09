@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { SourceProvider } from "./components/sources";
 import DocumentPage from "./pages/Document";
 import Library from "./pages/Library";
+import Progress from "./pages/Progress";
 import Review from "./pages/Review";
 import { AskPanel } from "./pages/doc/AskPanel";
 import { CardsPanel } from "./pages/doc/CardsPanel";
@@ -31,7 +32,7 @@ const router = createBrowserRouter([
         ),
       },
       { path: "/review", element: <Review /> },
-      { path: "/progress", element: <Placeholder name="Weak spots" /> },
+      { path: "/progress", element: <Progress /> },
       { path: "/courses", element: <Placeholder name="Open courses" /> },
     ],
   },
