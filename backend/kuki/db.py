@@ -46,6 +46,31 @@ MIGRATIONS: list[str] = [
         created_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """,
+    # 3: quiz questions and the student's attempts at them
+    """
+    CREATE TABLE questions (
+        id            INTEGER PRIMARY KEY,
+        document_id   TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+        concept       TEXT NOT NULL,
+        prompt        TEXT NOT NULL,
+        ideal_answer  TEXT NOT NULL,
+        key_ideas     TEXT NOT NULL,             -- JSON list of strings
+        citations     TEXT NOT NULL,             -- JSON list of Citation
+        created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE attempts (
+        id                 INTEGER PRIMARY KEY,
+        question_id        INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+        answer             TEXT NOT NULL,
+        verdict            TEXT NOT NULL,        -- correct, partial, incorrect
+        score              INTEGER NOT NULL,     -- 0-100
+        misconception      TEXT,
+        misconception_type TEXT,
+        feedback           TEXT NOT NULL,        -- JSON of the full grade
+        created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX attempts_by_question ON attempts(question_id, created_at);
+    """,
 ]
 
 
