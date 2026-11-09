@@ -1,54 +1,33 @@
-# React + TypeScript + Vite
+# Kuki web app
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite + Tailwind CSS v4. Talks only to the local Kuki API.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+npm install
+npm run dev      # http://localhost:5173, proxies /api to http://127.0.0.1:8765 (override with KUKI_API)
+npm run build    # outputs dist/, which the backend serves at /
+npx eslint .
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
 ```
+src/
+  api/          typed client: one function per endpoint, types mirror the backend
+  components/   AppShell, DropZone, sources (citations + drawer), ReviewSession, …
+  pages/        Library, Document (+ doc/ tabs), Review, Progress, Courses
+  lib/          data hook, formatting, SM-2 preview, misconception labels
+  index.css     design tokens (light + dark), fonts, the "stitch" motif
+```
+
+## Design notes
+
+* Palette from the whale mascot: ink navy, whale blue, belly cream for quoted
+  sources, sea teal for understanding, blush for misconceptions.
+* Bricolage Grotesque for headings, Atkinson Hyperlegible for reading.
+* The dashed **stitch** marks content sewn to the student's own material
+  (citations, quoted sources, flipped flashcards). Uncited content is never stitched.
+* One ambient animation (the whale bobbing while the model works), disabled
+  under `prefers-reduced-motion`.
+* Keyboard: Space flips a flashcard and 1-4 rate it; Ctrl+Enter checks a quiz
+  answer; Escape closes the source drawer.
