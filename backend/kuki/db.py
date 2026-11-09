@@ -38,6 +38,14 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX segments_by_document ON segments(document_id, ordinal);
     """,
+    # 2: generated study packs (stored as JSON; regenerating replaces them)
+    """
+    CREATE TABLE study_packs (
+        document_id   TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+        payload       TEXT NOT NULL,
+        created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    """,
 ]
 
 
