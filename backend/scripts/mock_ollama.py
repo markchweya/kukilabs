@@ -58,18 +58,18 @@ def answer(title: str, prompt: str) -> dict:
             "sources": [t],
         } for t, _, b in src[:5]]}
     if title == "GradeDraft":
-        # Mark every claim supported and every key idea after the first missing.
+        # Mark every claim supported.
         claims = re.findall(r"^\d+\. (.+)$", prompt.split("CLAIMS TO CHECK")[-1].split("Steps:")[0], re.M)
-        ideas = re.findall(r"^- (.+)$", prompt.split("KEY IDEAS:")[-1].split("LECTURE SOURCES:")[0], re.M)
         return {
             "checks": [{"status": "supported", "correction": ""} for _ in claims],
-            "missing_ideas": ideas[1:],
             "misconception_type": "missing_step",
             "nudge": "(Mock) What happens in the step between the input and the result?",
             "explanation": "This feedback comes from the development mock, not a model.",
         }
     if title == "AgreementCheck":
         return {"lecture_quote": first_sentence(src[0][2]), "agrees": True}
+    if title == "IdeaCheck":
+        return {"student_quote": "", "stated": False}
     if title == "DeckDraft":
         return {"cards": [{"front": f"What is {topic(b)}?", "back": first_sentence(b), "sources": [t]} for t, _, b in src[:10]]}
     if title == "AnswerDraft":

@@ -49,6 +49,9 @@ class ClaimCheck(BaseModel):
 class GradeDraft(BaseModel):
     """What the model writes when grading.
 
+    Which key ideas are missing is NOT asked here: the model's list missed
+    ideas and ignored paraphrases, so each key idea gets its own IdeaCheck.
+
     The student's answer is split into numbered claims *in code* (a real 3B
     model would not split it, and judged the whole answer as one claim). The
     model only classifies each numbered claim, in order. Field order matters:
@@ -57,22 +60,19 @@ class GradeDraft(BaseModel):
     """
 
     checks: list[ClaimCheck] = Field(description="One check per numbered claim, in the same order")
-    missing_ideas: list[str] = Field(description="Key ideas from the list that the answer does not cover, copied exactly")
     misconception_type: MisconceptionType
     nudge: str = Field(max_length=250, description="One guiding question that helps the student find the fix themselves")
     explanation: str = Field(max_length=600, description="A short correct explanation using only the lecture sources")
 
     @classmethod
     def schema_for(cls, claims: int, key_ideas: int) -> dict:
-        """JSON schema with exactly one check per claim and at most one entry per key idea.
+        """JSON schema with exactly one check per claim.
 
-        Without these bounds a real 3B model kept appending items until the
+        Without this bound a real 3B model kept appending items until the
         request timed out.
         """
         schema = cls.model_json_schema()
-        props = schema["properties"]
-        props["checks"].update(minItems=claims, maxItems=claims)
-        props["missing_ideas"].update(maxItems=key_ideas)
+        schema["properties"]["checks"].update(minItems=claims, maxItems=claims)
         return schema
 
 
@@ -87,6 +87,17 @@ class AgreementCheck(BaseModel):
 
     lecture_quote: str = Field(max_length=300, description="The lecture sentence most about this claim")
     agrees: bool = Field(description="True if the lecture agrees with every part of the claim")
+
+
+class IdeaCheck(BaseModel):
+    """Did the student state a key idea, in any words?
+
+    The grader's "missing ideas" list ignored paraphrases ("level by level"
+    for "all nodes at a given depth"), so each reported gap is re-checked.
+    """
+
+    student_quote: str = Field(max_length=300, description="The part of the student's answer that states this idea, or empty")
+    stated: bool = Field(description="True if the student's answer states this idea, even in different words")
 
 
 class GradeResult(BaseModel):

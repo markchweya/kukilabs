@@ -79,17 +79,27 @@ class SourceSet:
         return out
 
     def _prune(self, tags: list[str], claim: str) -> list[str]:
-        terms = _stems(claim)
+        terms = content_stems(claim)
         if not terms:
             return tags
-        support = {t: len(terms & _stems(self.by_tag[t].text)) / len(terms) for t in tags}
+        support = {t: len(terms & content_stems(self.by_tag[t].text)) / len(terms) for t in tags}
         best = max(support.values())
         return [t for t in tags if support[t] == best or (support[t] >= MIN_SUPPORT and support[t] >= best / 2)]
 
 
-def _stems(text: str) -> set[str]:
-    """Content words with a light plural strip, so 'costs' matches 'cost'."""
-    return {w[:-1] if len(w) > 3 and w.endswith("s") else w for w in tokenize(text)}
+def content_stems(text: str) -> set[str]:
+    """Content words, lightly stemmed so 'costs'/'cost' and 'uses'/'using'/'use' match."""
+    return {_stem(w) for w in tokenize(text)}
+
+
+def _stem(word: str) -> str:
+    if len(word) > 4 and word.endswith("ing"):
+        word = word[:-3]
+    elif len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+        word = word[:-1]
+    if len(word) > 2 and word.endswith("e"):
+        word = word[:-1]
+    return word
 
 
 def _excerpt(text: str, limit: int = 240) -> str:

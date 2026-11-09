@@ -8,6 +8,8 @@ import random
 import re
 import sqlite3
 
+import numpy as np
+
 from kuki.db import transaction
 from kuki.library import Library, NotFound
 from kuki.llm import OllamaClient, OllamaError
@@ -16,8 +18,8 @@ from kuki.study import prompts
 from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
-from kuki.study.quiz_models import ClaimCheck, AgreementCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
-from kuki.study.sources import Citation, SourceSet
+from kuki.study.quiz_models import AgreementCheck, ClaimCheck, Grade, GradeDraft, GradeResult, IdeaCheck, QuizDraft, Question
+from kuki.study.sources import Citation, SourceSet, content_stems
 from kuki.study.text import clean, strip_source_tags
 
 log = logging.getLogger(__name__)
@@ -162,7 +164,9 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
             num_predict=GRADE_TOKEN_BUDGET,
         )
         draft = _confirm_contradictions(library, llm, draft, claims, source_text)
-        result = aggregate_grade(draft, claims, key_ideas)
+        supported = [c for c, chk in zip(claims, draft.checks) if chk.status == "supported"]
+        missing = _missing_ideas(library, llm, answer, key_ideas, supported)
+        result = aggregate_grade(draft, claims, key_ideas, missing)
         mode = "ai"
     except OllamaError as exc:
         log.info("AI grading failed (%s); using keyword overlap.", exc)
@@ -186,26 +190,37 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
     )
 
 
-# Second opinions per answer; each is a short call.
-MAX_VERIFICATIONS = 2
+# Claims checked individually per answer; each check is a short call (~7 s on a laptop CPU).
+MAX_VERIFICATIONS = 6
+# Every content word of the claim must appear in the quoted lecture sentence
+# for word overlap alone to count as support. At 0.6, "DFS uses a queue"
+# passed against "DFS uses a stack": the one word that mattered differed.
+QUOTE_SUPPORT = 1.0
 
 
 def _confirm_contradictions(
     library: Library, llm: OllamaClient, draft: GradeDraft, claims: list[str], source_text: str
 ) -> GradeDraft:
-    """Ask a narrow yes/no question before telling a student they are wrong.
+    """Re-check every claim with a narrow question before trusting the grader.
 
-    In real testing the 3B grader told a student "BFS uses a queue, not a
-    FIFO queue". A focused second check, quote first, catches such false
-    alarms. If the lecture agrees with the claim, it counts as supported.
+    On Llama 3.2 3B the grader's per-claim labels were unreliable both ways:
+    it told a student "BFS uses a queue, not a FIFO queue", and it marked
+    "DFS uses a queue" as supported. A focused "does the lecture agree?" check,
+    which must quote the lecture first, was markedly better. The final label:
+
+    * lecture agrees, or the quote contains every word of the claim -> supported;
+    * grader said contradicted and the check doesn't clear it -> contradicted
+      (correction falls back to the lecture's own sentence);
+    * grader said supported but the check disagrees -> not in notes: no
+      credit, but no accusation either. Telling a student they're wrong when
+      they aren't is the worse mistake, so that needs both signals.
     """
-    checks = list(draft.checks)
-    flagged = [i for i, c in enumerate(checks[: len(claims)]) if c.status == "contradicted"][:MAX_VERIFICATIONS]
-    for i in flagged:
+    checks = list(draft.checks) + [ClaimCheck(status="not_in_notes", correction="")] * max(0, len(claims) - len(draft.checks))
+    for i, claim in enumerate(claims[:MAX_VERIFICATIONS]):
         try:
-            verdict = llm.chat_json(
+            check = llm.chat_json(
                 library.settings.chat_model,
-                [{"role": "user", "content": prompts.verify_contradiction(claims[i], source_text)}],
+                [{"role": "user", "content": prompts.verify_contradiction(claim, source_text)}],
                 AgreementCheck,
                 temperature=0.0,
                 num_ctx=library.settings.num_ctx,
@@ -213,9 +228,85 @@ def _confirm_contradictions(
             )
         except OllamaError:
             continue  # keep the grader's judgement if the check can't run
-        if verdict.agrees:
+        original = checks[i]
+        if check.agrees or _quote_supports(claim, check.lecture_quote):
             checks[i] = ClaimCheck(status="supported", correction="")
-    return draft.model_copy(update={"checks": checks})
+        elif original.status == "contradicted":
+            checks[i] = ClaimCheck(status="contradicted", correction=original.correction or _quoted(check.lecture_quote))
+        elif original.status == "supported":
+            checks[i] = ClaimCheck(status="not_in_notes", correction="")
+    return draft.model_copy(update={"checks": checks[: max(len(claims), len(draft.checks))]})
+
+
+# Cosine similarity (nomic-embed-text) at which a verified-correct claim counts
+# as stating a key idea. Measured on real output: ideas a student stated
+# scored >= 0.74 against their correct claims, ideas they didn't <= 0.63.
+IDEA_SIMILARITY = 0.70
+
+
+def _missing_ideas(
+    library: Library, llm: OllamaClient, answer: str, key_ideas: list[str], supported: list[str]
+) -> list[str]:
+    """Which key ideas did the student not state?
+
+    Only claims already verified as correct can cover an idea, so a wrong
+    statement on the same topic ("BFS and DFS both use a queue") never earns
+    credit for "DFS uses a stack". A claim covers an idea if it contains all
+    of the idea's words, or (catching paraphrases like "level by level" for
+    "all nodes at a given depth") if their embeddings are close. If the
+    embedding model is missing, a narrow LLM check per idea is the fallback.
+    """
+    supported_terms = set(tokenize(" ".join(supported)))
+    remaining = [idea for idea in key_ideas if not _covered(idea, supported_terms)]
+    if not remaining or not supported:
+        return remaining
+
+    similarity = _best_similarity(library, llm, remaining, supported)
+    if similarity is not None:
+        return [idea for idea in remaining if similarity[idea] < IDEA_SIMILARITY]
+    return [idea for idea in remaining if not _llm_says_stated(library, llm, idea, answer)]
+
+
+def _best_similarity(library: Library, llm: OllamaClient, ideas: list[str], claims: list[str]) -> dict[str, float] | None:
+    """Highest cosine similarity between each idea and any claim, or None without embeddings."""
+    try:
+        vectors = np.asarray(llm.embed(library.settings.embed_model, ideas + claims), dtype=np.float32)
+    except OllamaError:
+        return None
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    vectors = vectors / np.where(norms == 0, 1, norms)
+    sims = vectors[: len(ideas)] @ vectors[len(ideas) :].T
+    return {idea: float(sims[i].max()) for i, idea in enumerate(ideas)}
+
+
+def _llm_says_stated(library: Library, llm: OllamaClient, idea: str, answer: str) -> bool:
+    try:
+        check = llm.chat_json(
+            library.settings.chat_model,
+            [{"role": "user", "content": prompts.check_idea(idea, answer)}],
+            IdeaCheck,
+            temperature=0.0,
+            num_ctx=library.settings.num_ctx,
+            num_predict=200,
+        )
+    except OllamaError:
+        return False
+    return check.stated and bool(check.student_quote.strip()) and _from_answer(check.student_quote, answer)
+
+
+def _from_answer(quote: str, answer: str) -> bool:
+    terms = content_stems(quote)
+    return bool(terms) and len(terms & content_stems(answer)) / len(terms) >= 0.8
+
+
+def _quote_supports(claim: str, quote: str) -> bool:
+    terms = content_stems(claim)
+    return bool(terms) and len(terms & content_stems(quote)) / len(terms) >= QUOTE_SUPPORT
+
+
+def _quoted(quote: str) -> str:
+    quote = clean(quote).rstrip(".")
+    return f"the lecture says “{quote}”." if quote else ""
 
 
 # Each contradicted claim costs this many points on top of missing key ideas.
@@ -224,7 +315,7 @@ CONTRADICTION_PENALTY = 30
 NOTHING_RIGHT_CAP = 30
 
 
-def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) -> GradeResult:
+def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str], missing: list[str]) -> GradeResult:
     """Turn per-claim checks into a verdict, score and feedback, in code.
 
     Guards against what a real 3B model did in testing:
@@ -239,13 +330,7 @@ def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) 
     pairs = list(zip(claims, draft.checks))
     supported = [c for c, chk in pairs if chk.status == "supported"]
     contradicted = [(c, chk) for c, chk in pairs if chk.status == "contradicted"]
-    wanted = {_norm(k): k for k in key_ideas}
-    missing = [wanted[_norm(m)] for m in draft.missing_ideas if _norm(m) in wanted]
-    # Backstop: a 3B model listed "BFS uses a FIFO queue" as missing from an
-    # answer that said exactly that. An idea whose words are all in the answer
-    # is not missing.
-    answer_terms = set(tokenize(" ".join(claims)))
-    missing = [m for m in dict.fromkeys(missing) if not _covered(m, answer_terms)]
+    missing = [m for m in dict.fromkeys(missing) if m in key_ideas]
 
     coverage = (len(key_ideas) - len(missing)) / len(key_ideas) if key_ideas else (1.0 if supported else 0.0)
     score = round(100 * coverage) - CONTRADICTION_PENALTY * len(contradicted)
@@ -290,6 +375,9 @@ def aggregate_grade(draft: GradeDraft, claims: list[str], key_ideas: list[str]) 
 # "because" leaves fragments with no subject ("may return a longer path").
 _CLAIM_SPLIT = re.compile(r"(?<=[.!?])\s+|;\s*")
 MAX_CLAIMS = 8
+# "BFS and DFS both use a queue" -> two claims. A half-right compound claim
+# was credited as correct by the real model; split, each half is judged alone.
+_BOTH = re.compile(r"^(?P<a>[\w*+\-]+(?: [\w*+\-]+)?) and (?P<b>[\w*+\-]+(?: [\w*+\-]+)?) (?:both|each) (?P<rest>.+)$", re.I)
 
 
 def split_claims(answer: str) -> list[str]:
@@ -311,6 +399,7 @@ def split_claims(answer: str) -> list[str]:
         carry = ""
     if carry:
         claims.append(carry)
+    claims = [part for claim in claims for part in _split_both(claim)]
     if len(claims) > MAX_CLAIMS:
         claims = claims[: MAX_CLAIMS - 1] + [" ".join(claims[MAX_CLAIMS - 1 :])]
     return claims
@@ -333,16 +422,19 @@ def tidy_correction(text: str, max_sentences: int = 2) -> str:
     return " ".join(sentences[:max_sentences]).strip()
 
 
+def _split_both(claim: str) -> list[str]:
+    m = _BOTH.match(claim)
+    if not m:
+        return [claim]
+    return [f"{m['a']} {m['rest']}", f"{m['b']} {m['rest']}"]
+
+
 def _lower_first(text: str) -> str:
     """Lowercase a sentence's first letter to continue a sentence, unless it starts an acronym (DFS, A*)."""
     first = text.split(" ", 1)[0]
     if len(first) > 1 and not first[1:].islower():
         return text
     return text[:1].lower() + text[1:]
-
-
-def _norm(text: str) -> str:
-    return " ".join(tokenize(text))
 
 
 def _cited_text(library: Library, citations: list[Citation]) -> str:
