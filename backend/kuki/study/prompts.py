@@ -44,8 +44,14 @@ def pack_summary(points: list[str], hint: str) -> str:
     bullet_list = "\n".join(f"- {p}" for p in points[:20])
     return f"""Write a short title and a 2-3 sentence overview for a study guide with these key points.
 The material is called "{hint}".
-The overview must say what the lecture actually teaches, using its specific ideas.
-Do not write "this study guide covers" or promise what the reader will be able to do.
+The overview states the lecture's main ideas directly, like a textbook summary.
+
+Good overview (for a different lecture):
+"Sorting algorithms put items in order. Insertion sort is simple but slow on large inputs,
+while merge sort splits the list in half and merges sorted halves, running in O(n log n) time."
+
+Bad overview: "In this guide we'll delve into sorting. By the end you'll understand..."
+Never talk about the guide, the reader, or what they will learn.
 
 {bullet_list}"""
 
