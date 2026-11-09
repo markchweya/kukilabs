@@ -35,6 +35,7 @@ class Document:
     attribution: str | None
     created_at: str
     segment_count: int
+    audio_url: str | None = None
 
 
 class NotFound(LookupError):
@@ -43,7 +44,7 @@ class NotFound(LookupError):
 
 _DOC_COLUMNS = """
     d.id, d.title, d.filename, d.kind, d.status, d.error, d.source_url, d.license,
-    d.attribution, d.created_at,
+    d.attribution, d.created_at, d.audio_url,
     (SELECT COUNT(*) FROM segments s WHERE s.document_id = d.id) AS segment_count
 """
 
@@ -64,13 +65,14 @@ class Library:
         source_url: str | None = None,
         license: str | None = None,
         attribution: str | None = None,
+        audio_url: str | None = None,
     ) -> str:
         doc_id = uuid.uuid4().hex[:12]
         with transaction(self.conn):
             self.conn.execute(
-                "INSERT INTO documents(id, title, filename, kind, source_url, license, attribution)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (doc_id, title, filename, kind, source_url, license, attribution),
+                "INSERT INTO documents(id, title, filename, kind, source_url, license, attribution, audio_url)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (doc_id, title, filename, kind, source_url, license, attribution, audio_url),
             )
         return doc_id
 
@@ -91,6 +93,10 @@ class Library:
         # Remove the stored upload too: deleting means deleting.
         for path in self.settings.uploads_dir.glob(f"{doc_id}.*"):
             path.unlink(missing_ok=True)
+
+    def find_by_source(self, source_url: str) -> Document | None:
+        row = self.conn.execute("SELECT id FROM documents WHERE source_url = ?", (source_url,)).fetchone()
+        return self.get_document(row[0]) if row else None
 
     def upload_path(self, doc_id: str, filename: str) -> Path:
         """Where an upload is stored: <data>/uploads/<id><ext>."""

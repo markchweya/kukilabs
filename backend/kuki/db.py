@@ -94,6 +94,10 @@ MIGRATIONS: list[str] = [
         reviewed_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """,
+    # 5: link to the original recording for imported lectures
+    """
+    ALTER TABLE documents ADD COLUMN audio_url TEXT;
+    """,
 ]
 
 

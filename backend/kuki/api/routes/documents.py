@@ -30,6 +30,7 @@ class DocumentOut(BaseModel):
     attribution: str | None
     created_at: str
     segment_count: int
+    audio_url: str | None = None
 
     @classmethod
     def of(cls, doc: Document) -> "DocumentOut":
