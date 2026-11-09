@@ -1,1 +1,114 @@
+/*
+ * Kuki design tokens.
+ * The palette comes from the whale plushie: ink navy (its eye), whale blue
+ * (its body), belly cream (quoted source text), sea teal (understood) and
+ * blush (a misconception: soft, because mistakes are where learning happens).
+ * Fonts are self-hosted so Kuki looks right offline.
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
+@import "@fontsource/atkinson-hyperlegible/400-italic.css";
 
+:root {
+  --tide: #eef3fb;
+  --paper: #ffffff;
+  --belly: #fff8ee;
+  --ink: #1b2a4a;
+  --ink-soft: #52607d;
+  --line: #d6dfee;
+  --whale: #4f7fe0;
+  --whale-deep: #2f5bc2;
+  --whale-wash: #e3ecfd;
+  --stitch: #b9c9ea;
+  --sea: #0f9f8f;
+  --sea-wash: #ddf4f0;
+  --blush: #e86a86;
+  --blush-wash: #fde9ee;
+  --sun: #c98a16;
+  --sun-wash: #fdf2dc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tide: #0e1626;
+    --paper: #152035;
+    --belly: #1f2a3f;
+    --ink: #e8eefb;
+    --ink-soft: #9fb0cf;
+    --line: #2a3a58;
+    --whale: #7aa2ff;
+    --whale-deep: #a9c2ff;
+    --whale-wash: #1c2c4f;
+    --stitch: #3e5584;
+    --sea: #4fd1bf;
+    --sea-wash: #13332f;
+    --blush: #ff93aa;
+    --blush-wash: #3a1e29;
+    --sun: #f1b84e;
+    --sun-wash: #3a2c12;
+  }
+}
+
+@theme inline {
+  --color-tide: var(--tide);
+  --color-paper: var(--paper);
+  --color-belly: var(--belly);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-whale: var(--whale);
+  --color-whale-deep: var(--whale-deep);
+  --color-whale-wash: var(--whale-wash);
+  --color-stitch: var(--stitch);
+  --color-sea: var(--sea);
+  --color-sea-wash: var(--sea-wash);
+  --color-blush: var(--blush);
+  --color-blush-wash: var(--blush-wash);
+  --color-sun: var(--sun);
+  --color-sun-wash: var(--sun-wash);
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--tide);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+:focus-visible {
+  outline: 2.5px solid var(--whale);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--whale-wash);
+}
+
+/*
+ * The stitch: Kuki's one signature motif. A dashed seam marks anything that is
+ * "sewn" to the student's own material (citations, quoted sources). Content
+ * with no source never gets a stitch.
+ */
+.stitched {
+  border: 1.5px dashed var(--stitch);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
