@@ -13,7 +13,12 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel
 
+from kuki.search.bm25 import tokenize
 from kuki.search.hybrid import Passage
+
+# An extra citation must share at least this fraction of the claim's content
+# words with its passage, and at least half as much as the best citation.
+MIN_SUPPORT = 0.25
 
 
 class Citation(BaseModel):
@@ -44,15 +49,25 @@ class SourceSet:
             blocks.append(f"[{tag}] ({p.document_title}, {p.locator})\n{text}")
         return "\n\n".join(blocks)
 
-    def resolve(self, tags: list[str]) -> list[Citation]:
-        """Map model-cited tags to citations, dropping unknown and duplicate tags."""
+    def resolve(self, tags: list[str], claim: str | None = None) -> list[Citation]:
+        """Map model-cited tags to citations, dropping unknown and duplicate tags.
+
+        With `claim`, extra citations that barely relate to it are dropped too.
+        A real Llama 3.2 3B run cited the same generic slide on almost every
+        item; the best-matching citation is always kept.
+        """
         seen: set[str] = set()
-        out: list[Citation] = []
+        valid: list[str] = []
         for raw in tags:
             tag = raw.strip().strip("[]").upper()
             if tag in seen or tag not in self.by_tag:
                 continue
             seen.add(tag)
+            valid.append(tag)
+        if claim and len(valid) > 1:
+            valid = self._prune(valid, claim)
+        out: list[Citation] = []
+        for tag in valid:
             p = self.by_tag[tag]
             out.append(Citation(
                 segment_id=p.segment_id,
@@ -62,6 +77,29 @@ class SourceSet:
                 excerpt=_excerpt(p.text),
             ))
         return out
+
+    def _prune(self, tags: list[str], claim: str) -> list[str]:
+        terms = content_stems(claim)
+        if not terms:
+            return tags
+        support = {t: len(terms & content_stems(self.by_tag[t].text)) / len(terms) for t in tags}
+        best = max(support.values())
+        return [t for t in tags if support[t] == best or (support[t] >= MIN_SUPPORT and support[t] >= best / 2)]
+
+
+def content_stems(text: str) -> set[str]:
+    """Content words, lightly stemmed so 'costs'/'cost' and 'uses'/'using'/'use' match."""
+    return {_stem(w) for w in tokenize(text)}
+
+
+def _stem(word: str) -> str:
+    if len(word) > 4 and word.endswith("ing"):
+        word = word[:-3]
+    elif len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+        word = word[:-1]
+    if len(word) > 2 and word.endswith("e"):
+        word = word[:-1]
+    return word
 
 
 def _excerpt(text: str, limit: int = 240) -> str:

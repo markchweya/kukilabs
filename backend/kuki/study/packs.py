@@ -29,6 +29,7 @@ from kuki.study.pack_models import (
     StudyPackDraft,
 )
 from kuki.study.sources import SourceSet, batch_by_size
+from kuki.study.text import strip_source_tags as clean
 
 log = logging.getLogger(__name__)
 
@@ -93,10 +94,10 @@ def _ai_pack(
             StudyPackDraft,
             num_ctx=settings.num_ctx,
         )
-        concepts += [Concept(term=c.term, explanation=c.explanation, citations=sources.resolve(c.sources)) for c in draft.concepts]
-        points += [KeyPoint(point=p.point, citations=sources.resolve(p.sources)) for p in draft.key_points]
-        examples += [Example(title=e.title, explanation=e.explanation, citations=sources.resolve(e.sources)) for e in draft.examples]
-        mistakes += [Mistake(mistake=m.mistake, correction=m.correction, citations=sources.resolve(m.sources)) for m in draft.common_mistakes]
+        concepts += [Concept(term=clean(c.term), explanation=clean(c.explanation), citations=sources.resolve(c.sources, f"{c.term} {c.explanation}")) for c in draft.concepts]
+        points += [KeyPoint(point=clean(p.point), citations=sources.resolve(p.sources, p.point)) for p in draft.key_points]
+        examples += [Example(title=clean(e.title), explanation=clean(e.explanation), citations=sources.resolve(e.sources, e.explanation)) for e in draft.examples]
+        mistakes += [Mistake(mistake=clean(m.mistake), correction=clean(m.correction), citations=sources.resolve(m.sources, f"{m.mistake} {m.correction}")) for m in draft.common_mistakes]
 
     if knowledge == "notes_only":
         # In notes-only mode an item with no valid citation is most likely a
@@ -134,7 +135,7 @@ def _summarise(settings: Settings, llm: OllamaClient, hint: str, points: list[st
             PackSummaryDraft,
             num_ctx=settings.num_ctx,
         )
-        return summary.title.strip() or hint, summary.overview.strip()
+        return clean(summary.title) or hint, clean(summary.overview)
     except OllamaError as exc:
         log.info("Summary failed (%s); using document title.", exc)
         return hint, " ".join(points[:2])

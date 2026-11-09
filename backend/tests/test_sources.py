@@ -22,3 +22,19 @@ def test_numbering_offset_keeps_tags_unique_across_batches():
 def test_batch_by_size():
     batches = batch_by_size([p(i, "x" * 400) for i in range(5)], max_chars=1000)
     assert [len(b) for b in batches] == [2, 2, 1]
+
+
+def test_unrelated_extra_citations_are_pruned():
+    # Mirrors a real run: a generic slide cited next to the one that says it.
+    sources = SourceSet.number([
+        p(4, "BFS uses a queue. Complete: always finds a solution. Optimal when every step costs the same."),
+        p(2, "Initial state, actions, transition model, goal test, path cost: every search algorithm uses these."),
+        p(8, "BFS: complete, optimal for equal step costs, high memory."),
+    ])
+    cites = sources.resolve(["S1", "S2", "S3"], claim="BFS is complete and optimal for equal step costs.")
+    assert [c.locator for c in cites] == ["Slide 4", "Slide 8"]
+
+
+def test_single_citation_is_never_pruned():
+    sources = SourceSet.number([p(2, "unrelated words entirely")])
+    assert len(sources.resolve(["S1"], claim="BFS uses a queue")) == 1

@@ -95,3 +95,13 @@ def test_embed_batches():
     vectors = make(fake).embed("nomic-embed-text", [f"t{i}" for i in range(5)], batch_size=2)
     assert len(vectors) == 5
     assert sum(1 for path, _ in fake.requests if path == "/api/embed") == 3
+
+
+def test_schema_override_and_token_cap_are_sent():
+    fake = FakeOllama()
+    fake.respond("Answer", {"text": "hi", "score": 1})
+    schema = {**Answer.model_json_schema(), "maxProperties": 2}
+    make(fake).chat_json("m", [{"role": "user", "content": "q"}], Answer, schema=schema, num_predict=300)
+    _, body = fake.requests[-1]
+    assert body["format"]["maxProperties"] == 2
+    assert body["options"]["num_predict"] == 300

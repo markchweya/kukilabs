@@ -29,7 +29,28 @@ Kuki keeps everything on the student's laptop. No account, no API bill, no data 
 | **Ask** | Questions answered only from your notes, with citations. "That's not in your notes" is a valid answer. |
 | **Open Course Library** | One-click import of openly licensed lectures from **Harvard CS50** and **Open Yale Courses**, with transcripts split by timestamped chapter and recordings you can save for offline listening. |
 
-![Open courses](docs/screenshots/open-courses.png)
+### Real output
+
+These screenshots show genuine output from **Llama 3.2 3B running locally**
+(the default model) on the included demo deck. The quiz answer was typed and
+graded live.
+
+**A misconception named precisely.** The student wrote "BFS and DFS both use a queue":
+
+![Quiz feedback](docs/screenshots/quiz-feedback.png)
+
+**Every claim stitched to its source.** Tap a citation to read the slide:
+
+![Source drawer](docs/screenshots/source-drawer.png)
+
+| Study pack | Ask |
+|---|---|
+| ![Study pack](docs/screenshots/study-pack.png) | ![Ask](docs/screenshots/ask.png) |
+| **Flashcards** | **Open courses** |
+| ![Flashcard](docs/screenshots/flashcard.png) | ![Open courses](docs/screenshots/open-courses.png) |
+
+How these results were reached, including what the model got wrong at first,
+is in [docs/REAL_MODEL_TESTING.md](docs/REAL_MODEL_TESTING.md).
 
 ## Quick start
 
@@ -86,6 +107,8 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 * **Honest about gaps.** *Fill gaps* mode lets Kuki add missing steps, but each one is labelled
   *Not from your notes*.
 * **Coaching, not answers.** Quiz feedback hides the model answer until asked and leads with a guiding question.
+* **Never wrongly accusing.** Each claim in an answer is checked separately and re-verified against the
+  lecture. A student is only told they're wrong when two independent checks agree.
 * **Graceful without AI.** If Ollama is off, packs are copied from your notes (still cited), quizzes use recall,
   grading matches key ideas and says what it can't do, and search falls back to keywords.
 
