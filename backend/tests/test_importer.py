@@ -57,3 +57,35 @@ def test_import_errors(library, settings):
     library.settings = replace(settings, allow_downloads=False)
     with pytest.raises(ImportFailed, match="turned off"):
         import_lecture(library, None, "cs50-ai", 1, fake_web({}, []))
+
+
+def test_save_audio_for_offline(library):
+    url = "https://oyc.yale.edu/philosophy/phil-181/lecture-14"
+    audio = "https://oyc.yale.edu/sites/default/files/courses/exmp101/mp3/exmp101_01.mp3"
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(str(request.url))
+        if str(request.url) == url:
+            return httpx.Response(200, text=(FIXTURES / "oyc_lecture.html").read_text())
+        if str(request.url) == audio:
+            return httpx.Response(200, content=b"ID3" + b"\0" * 1000)
+        return httpx.Response(404)
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    from kuki.openlib.importer import save_audio
+
+    doc = import_lecture(library, None, "yale-phil-181", 14, http)
+    path = save_audio(library, doc.id, http)
+    assert path.read_bytes().startswith(b"ID3")
+    assert save_audio(library, doc.id, http) == path  # already saved: no second download
+    assert seen.count(audio) == 1
+    assert not list(path.parent.glob("*.part"))
+
+
+def test_save_audio_requires_a_recording(library):
+    from kuki.openlib.importer import save_audio
+
+    doc_id = library.create_document(title="x", filename="x.md", kind="text")
+    with pytest.raises(ImportFailed, match="no recording"):
+        save_audio(library, doc_id, fake_web({}, []))

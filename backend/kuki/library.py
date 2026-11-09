@@ -98,6 +98,10 @@ class Library:
         row = self.conn.execute("SELECT id FROM documents WHERE source_url = ?", (source_url,)).fetchone()
         return self.get_document(row[0]) if row else None
 
+    def local_audio_path(self, doc_id: str) -> Path:
+        """Where an imported lecture's recording is saved for offline playback."""
+        return self.settings.uploads_dir / f"{doc_id}.audio.mp3"
+
     def upload_path(self, doc_id: str, filename: str) -> Path:
         """Where an upload is stored: <data>/uploads/<id><ext>."""
         return self.settings.uploads_dir / f"{doc_id}{Path(filename).suffix.lower()}"

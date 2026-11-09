@@ -6,6 +6,8 @@ student clicks Import. It can be switched off with KUKI_ALLOW_DOWNLOADS=0.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 
 from kuki import __version__
@@ -77,3 +79,42 @@ def _fetch_and_parse(http: httpx.Client | None, fmt: str, url: str) -> ParsedLec
         if own_client:
             client.close()
     return PARSERS[fmt](res.text, url)
+
+
+# Lecture recordings are ~40 MB; refuse anything absurd.
+MAX_AUDIO_BYTES = 400 * 1024 * 1024
+
+
+def save_audio(library: Library, doc_id: str, http: httpx.Client | None = None) -> Path:
+    """Download an imported lecture's recording so it plays offline."""
+    if not library.settings.allow_downloads:
+        raise ImportFailed("Downloads are turned off (KUKI_ALLOW_DOWNLOADS=0).")
+    doc = library.get_document(doc_id)
+    if not doc.audio_url:
+        raise ImportFailed("This lecture has no recording to save.")
+    dest = library.local_audio_path(doc_id)
+    if dest.exists():
+        return dest
+
+    partial = dest.with_suffix(".part")
+    own_client = http is None
+    client = http or httpx.Client(timeout=60, follow_redirects=True)
+    try:
+        with client.stream("GET", doc.audio_url, headers={"User-Agent": USER_AGENT}) as res:
+            res.raise_for_status()
+            written = 0
+            with partial.open("wb") as out:
+                for chunk in res.iter_bytes(1024 * 256):
+                    written += len(chunk)
+                    if written > MAX_AUDIO_BYTES:
+                        raise ImportFailed("The recording is unexpectedly large; not saved.")
+                    out.write(chunk)
+        # Rename only when complete, so a cut-off download never looks finished.
+        partial.replace(dest)
+        return dest
+    except httpx.HTTPError as exc:
+        raise ImportFailed(f"Couldn't download the recording ({exc}).") from exc
+    finally:
+        partial.unlink(missing_ok=True)
+        if own_client:
+            client.close()
