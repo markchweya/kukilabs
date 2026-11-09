@@ -67,3 +67,21 @@ def test_unsupported_and_empty_files(tmp_path):
     empty.write_text("   ")
     with pytest.raises(ExtractionError, match="No readable text"):
         extract(empty)
+
+
+def test_pdf_pages(tmp_path):
+    from tests.pdf_factory import write_pdf
+
+    path = tmp_path / "lecture.pdf"
+    write_pdf(path, ["A* uses f(n) = g(n) + h(n)", "", "Admissible heuristics never overestimate"])
+    segments = extract(path)
+    # The blank page is skipped but page numbers stay true to the original.
+    assert [s.locator for s in segments] == ["Page 1", "Page 3"]
+    assert "g(n) + h(n)" in segments[0].text
+
+
+def test_corrupt_pdf(tmp_path):
+    path = tmp_path / "broken.pdf"
+    path.write_bytes(b"%PDF-1.4 not really")
+    with pytest.raises(ExtractionError):
+        extract(path)
