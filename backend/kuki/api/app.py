@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from kuki import __version__
@@ -49,6 +50,13 @@ def create_app(settings: Settings | None = None, llm: OllamaClient | None = None
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+    # DNS-rebinding defence: a malicious site can point its own domain at
+    # 127.0.0.1, but it cannot fake the Host header. Only accept localhost
+    # names. "testserver" is what FastAPI's TestClient sends.
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver", *settings.extra_hosts],
     )
     _register_errors(app)
 
