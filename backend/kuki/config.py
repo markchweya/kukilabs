@@ -58,6 +58,8 @@ class Settings:
     max_upload_mb: int = 200
     # Allow the open-course importer to reach the internet.
     allow_downloads: bool = True
+    # Built web app to serve at "/" (frontend/dist). None disables it.
+    web_dir: Path | None = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "frontend" / "dist")
 
     @property
     def db_path(self) -> Path:
@@ -85,6 +87,7 @@ def load_settings() -> Settings:
         data_dir=Path(os.getenv("KUKI_DATA_DIR", str(defaults.data_dir))).expanduser(),
         max_upload_mb=_env_int("KUKI_MAX_UPLOAD_MB", defaults.max_upload_mb),
         allow_downloads=_env_bool("KUKI_ALLOW_DOWNLOADS", defaults.allow_downloads),
+        web_dir=Path(os.environ["KUKI_WEB_DIR"]) if os.getenv("KUKI_WEB_DIR") else defaults.web_dir,
     )
 
 

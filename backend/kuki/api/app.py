@@ -61,7 +61,33 @@ def create_app(settings: Settings | None = None, llm: OllamaClient | None = None
     app.include_router(flashcards.router)
     app.include_router(ask.router)
     app.include_router(courses.router)
+    _serve_web_app(app, settings)
     return app
+
+
+def _serve_web_app(app: FastAPI, settings: Settings) -> None:
+    """Serve the built React app so one `python -m kuki` runs everything.
+
+    Unknown non-API paths return index.html so client-side routes like
+    /doc/abc/quiz work on refresh.
+    """
+    web = settings.web_dir
+    if web is None or not (web / "index.html").exists():
+        return
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/assets", StaticFiles(directory=web / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str):
+        if path.startswith("api/"):
+            raise NotFound(f"No API route /{path}")
+        candidate = (web / path).resolve()
+        # Serve real files (favicon, icons) but never anything outside web_dir.
+        if path and candidate.is_file() and web.resolve() in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(web / "index.html")
 
 
 def _register_errors(app: FastAPI) -> None:
