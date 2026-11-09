@@ -2,6 +2,7 @@
 // gets diagnosed feedback, and can try again before moving on. Retrying is the
 // point: fixing your own misconception is what makes it stick.
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api, type Grade, type KukiDocument, type Question } from "../../api";
 import { Citations } from "../../components/sources";
 import { Button, Empty, ErrorNote, Working } from "../../components/ui";
@@ -43,7 +44,7 @@ export function QuizPanel({ doc }: { doc: KukiDocument }) {
 
   if (index >= questions.length) {
     return (
-      <Empty title="Quiz done" action={<div className="flex gap-2"><Button variant="primary" onClick={start}>New questions</Button><a href="/progress" className="rounded-full border border-line bg-paper px-4 py-2 font-bold">See weak spots</a></div>}>
+      <Empty title="Quiz done" action={<div className="flex gap-2"><Button variant="primary" onClick={start}>New questions</Button><Link to="/progress" className="rounded-full border border-line bg-paper px-4 py-2 font-bold">See weak spots</Link></div>}>
         Kuki saved what you found hard. Your weak spots page shows which ideas to revise next.
       </Empty>
     );
