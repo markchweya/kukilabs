@@ -76,15 +76,17 @@ class GradeDraft(BaseModel):
         return schema
 
 
-class ContradictionCheck(BaseModel):
-    """A narrow second opinion on one claim the grader flagged as wrong.
+class AgreementCheck(BaseModel):
+    """A narrow second opinion on a claim the grader flagged as wrong.
 
-    The quote comes first so the model has to find the relevant lecture text
-    before it answers yes or no.
+    Asked as "does the lecture agree?" rather than "is it false?": on Llama 3.2
+    3B the "is it false?" wording missed real errors, while this wording kept
+    them and still rejected the false alarm that prompted the check. The quote
+    comes first so the model finds the relevant lecture text before deciding.
     """
 
-    lecture_quote: str = Field(max_length=300, description="The exact lecture sentence about this topic")
-    contradicts: bool = Field(description="True only if the quote says the claim is false")
+    lecture_quote: str = Field(max_length=300, description="The lecture sentence most about this claim")
+    agrees: bool = Field(description="True if the lecture agrees with every part of the claim")
 
 
 class GradeResult(BaseModel):

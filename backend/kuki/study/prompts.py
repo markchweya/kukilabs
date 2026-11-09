@@ -135,13 +135,16 @@ SOURCES:
 
 
 def verify_contradiction(claim: str, sources: str) -> str:
-    return f"""A student wrote this claim:
-"{claim}"
+    return f"""Does the lecture agree with a student's claim?
+
+Examples:
+- Claim "DFS uses a queue". Lecture: "DFS goes deep first using a stack." -> agrees: false (the lecture says stack).
+- Claim "BFS uses a FIFO queue". Lecture: "BFS uses a queue: first in, first out." -> agrees: true (same thing, other words).
+- Claim "BFS and DFS both use a stack". Lecture: "BFS uses a queue." -> agrees: false (wrong for BFS).
 
 LECTURE SOURCES:
 {sources}
 
-Copy the one lecture sentence that is most about this claim. Then answer:
-does that sentence show the claim is FALSE?
-Saying the same thing in different words is NOT false (a FIFO queue is a queue).
-Leaving out details is NOT false."""
+CLAIM: "{claim}"
+
+Copy the lecture sentence most about this claim, then decide if the lecture agrees with EVERY part of the claim."""

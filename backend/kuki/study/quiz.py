@@ -16,7 +16,7 @@ from kuki.study import prompts
 from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
-from kuki.study.quiz_models import ClaimCheck, ContradictionCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
+from kuki.study.quiz_models import ClaimCheck, AgreementCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
 from kuki.study.text import clean, strip_source_tags
 
@@ -207,14 +207,14 @@ def _confirm_contradictions(
             verdict = llm.chat_json(
                 library.settings.chat_model,
                 [{"role": "user", "content": prompts.verify_contradiction(claims[i], source_text)}],
-                ContradictionCheck,
+                AgreementCheck,
                 temperature=0.0,
                 num_ctx=library.settings.num_ctx,
                 num_predict=200,
             )
         except OllamaError:
             continue  # keep the grader's judgement if the check can't run
-        if not verdict.contradicts:
+        if verdict.agrees:
             checks[i] = ClaimCheck(status="not_in_notes", correction="")
     return draft.model_copy(update={"checks": checks})
 

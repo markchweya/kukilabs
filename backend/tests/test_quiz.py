@@ -197,7 +197,7 @@ def test_unconfirmed_contradiction_is_not_reported(setup):
                    {"status": "supported", "correction": ""}],
         "missing_ideas": [], "misconception_type": "confused_concepts", "nudge": "Hmm?", "explanation": "E.",
     })
-    fake.respond("ContradictionCheck", {"lecture_quote": "BFS explores level by level using a FIFO queue.", "contradicts": False})
+    fake.respond("AgreementCheck", {"lecture_quote": "BFS explores level by level using a FIFO queue.", "agrees": True})
     grade = grade_answer(library, llm, q.id, "BFS uses a FIFO queue. DFS uses a stack and goes deep first.")
     assert grade.misconception == "" and grade.verdict == "correct"
 
@@ -210,6 +210,6 @@ def test_confirmed_contradiction_is_reported(setup):
         "checks": [{"status": "contradicted", "correction": "DFS uses a stack."}],
         "missing_ideas": [], "misconception_type": "confused_concepts", "nudge": "Hmm?", "explanation": "E.",
     })
-    fake.respond("ContradictionCheck", {"lecture_quote": "DFS goes deep first using a stack.", "contradicts": True})
+    fake.respond("AgreementCheck", {"lecture_quote": "DFS goes deep first using a stack.", "agrees": False})
     grade = grade_answer(library, llm, q.id, "DFS uses a queue.")
     assert grade.misconception.startswith("You said “DFS uses a queue”")
