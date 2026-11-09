@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +24,21 @@ def create_app(settings: Settings | None = None, llm: OllamaClient | None = None
     settings = settings or get_settings()
     settings.ensure_dirs()
 
-    app = FastAPI(title="Kuki", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Documents uploaded while the embedding model was missing get their
+        # vectors now, in a background thread so startup stays instant.
+        threading.Thread(target=_backfill_embeddings, args=(app,), daemon=True).start()
+        yield
+        app.state.llm.close()
+
+    app = FastAPI(
+        title="Kuki",
+        version=__version__,
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
+        lifespan=lifespan,
+    )
     app.state.settings = settings
     app.state.llm = llm or OllamaClient(settings.ollama_host, timeout=settings.request_timeout)
 
@@ -60,3 +76,18 @@ def _register_errors(app: FastAPI) -> None:
     app.add_exception_handler(ValueError, handler(422))
     app.add_exception_handler(ExtractionError, handler(422))
     app.add_exception_handler(OllamaUnavailable, handler(503))
+
+
+def _backfill_embeddings(app: FastAPI) -> None:
+    from kuki.api.deps import open_library
+
+    try:
+        library = open_library(app.state.settings)
+        try:
+            count = library.embed_missing(app.state.llm)
+            if count:
+                log.info("Embedded %d segments that were added while offline.", count)
+        finally:
+            library.conn.close()
+    except Exception:  # never let a background nicety crash the server
+        log.exception("Embedding backfill failed")
