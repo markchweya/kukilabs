@@ -35,6 +35,10 @@ def create_app(settings: Settings | None = None, llm: OllamaClient | None = None
         allow_headers=["*"],
     )
     _register_errors(app)
+
+    from kuki.api.routes import status
+
+    app.include_router(status.router)
     return app
 
 
