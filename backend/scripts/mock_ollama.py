@@ -68,6 +68,8 @@ def answer(title: str, prompt: str) -> dict:
             "nudge": "(Mock) What happens in the step between the input and the result?",
             "explanation": "This feedback comes from the development mock, not a model.",
         }
+    if title == "ContradictionCheck":
+        return {"lecture_quote": first_sentence(src[0][2]), "contradicts": False}
     if title == "DeckDraft":
         return {"cards": [{"front": f"What is {topic(b)}?", "back": first_sentence(b), "sources": [t]} for t, _, b in src[:10]]}
     if title == "AnswerDraft":

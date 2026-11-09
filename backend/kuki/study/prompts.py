@@ -132,3 +132,16 @@ QUESTION: {question}
 
 SOURCES:
 {sources}"""
+
+
+def verify_contradiction(claim: str, sources: str) -> str:
+    return f"""A student wrote this claim:
+"{claim}"
+
+LECTURE SOURCES:
+{sources}
+
+Copy the one lecture sentence that is most about this claim. Then answer:
+does that sentence show the claim is FALSE?
+Saying the same thing in different words is NOT false (a FIFO queue is a queue).
+Leaving out details is NOT false."""

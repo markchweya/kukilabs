@@ -76,6 +76,17 @@ class GradeDraft(BaseModel):
         return schema
 
 
+class ContradictionCheck(BaseModel):
+    """A narrow second opinion on one claim the grader flagged as wrong.
+
+    The quote comes first so the model has to find the relevant lecture text
+    before it answers yes or no.
+    """
+
+    lecture_quote: str = Field(max_length=300, description="The exact lecture sentence about this topic")
+    contradicts: bool = Field(description="True only if the quote says the claim is false")
+
+
 class GradeResult(BaseModel):
     """A finished grade, from either the AI grader or the offline keyword grader."""
 

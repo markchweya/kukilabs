@@ -16,7 +16,7 @@ from kuki.study import prompts
 from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
 from kuki.search.bm25 import tokenize
-from kuki.study.quiz_models import ClaimCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
+from kuki.study.quiz_models import ClaimCheck, ContradictionCheck, Grade, GradeDraft, GradeResult, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
 from kuki.study.text import clean
 
@@ -161,6 +161,7 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
             schema=GradeDraft.schema_for(len(claims), len(key_ideas)),
             num_predict=GRADE_TOKEN_BUDGET,
         )
+        draft = _confirm_contradictions(library, llm, draft, claims, source_text)
         result = aggregate_grade(draft, claims, key_ideas)
         mode = "ai"
     except OllamaError as exc:
@@ -183,6 +184,39 @@ def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: 
         mode=mode,
         **result.model_dump(),
     )
+
+
+# Second opinions per answer; each is a short call.
+MAX_VERIFICATIONS = 2
+
+
+def _confirm_contradictions(
+    library: Library, llm: OllamaClient, draft: GradeDraft, claims: list[str], source_text: str
+) -> GradeDraft:
+    """Ask a narrow yes/no question before telling a student they are wrong.
+
+    In real testing the 3B grader told a student "BFS uses a queue, not a
+    FIFO queue". A focused second check, quote first, catches such false
+    alarms. An unconfirmed contradiction becomes "not in notes", so it is
+    neither praised nor reported as a misconception.
+    """
+    checks = list(draft.checks)
+    flagged = [i for i, c in enumerate(checks[: len(claims)]) if c.status == "contradicted"][:MAX_VERIFICATIONS]
+    for i in flagged:
+        try:
+            verdict = llm.chat_json(
+                library.settings.chat_model,
+                [{"role": "user", "content": prompts.verify_contradiction(claims[i], source_text)}],
+                ContradictionCheck,
+                temperature=0.0,
+                num_ctx=library.settings.num_ctx,
+                num_predict=200,
+            )
+        except OllamaError:
+            continue  # keep the grader's judgement if the check can't run
+        if not verdict.contradicts:
+            checks[i] = ClaimCheck(status="not_in_notes", correction="")
+    return draft.model_copy(update={"checks": checks})
 
 
 # Each contradicted claim costs this many points on top of missing key ideas.

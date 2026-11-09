@@ -185,3 +185,31 @@ def test_grade_schema_is_sized_to_the_answer(setup):
     assert (checks["minItems"], checks["maxItems"]) == (2, 2)
     assert body["format"]["properties"]["missing_ideas"]["maxItems"] == 2
     assert body["options"]["num_predict"] == 700
+
+
+def test_unconfirmed_contradiction_is_not_reported(setup):
+    # Real failure: "BFS uses a queue, not a FIFO queue" told to a correct student.
+    library, fake, llm, doc_id = setup
+    fake.respond("QuizDraft", QUIZ)
+    q = generate_quiz(library, llm, doc_id)[0]
+    fake.respond("GradeDraft", {
+        "checks": [{"status": "contradicted", "correction": "BFS uses a queue, not a FIFO queue."},
+                   {"status": "supported", "correction": ""}],
+        "missing_ideas": [], "misconception_type": "confused_concepts", "nudge": "Hmm?", "explanation": "E.",
+    })
+    fake.respond("ContradictionCheck", {"lecture_quote": "BFS explores level by level using a FIFO queue.", "contradicts": False})
+    grade = grade_answer(library, llm, q.id, "BFS uses a FIFO queue. DFS uses a stack and goes deep first.")
+    assert grade.misconception == "" and grade.verdict == "correct"
+
+
+def test_confirmed_contradiction_is_reported(setup):
+    library, fake, llm, doc_id = setup
+    fake.respond("QuizDraft", QUIZ)
+    q = generate_quiz(library, llm, doc_id)[0]
+    fake.respond("GradeDraft", {
+        "checks": [{"status": "contradicted", "correction": "DFS uses a stack."}],
+        "missing_ideas": [], "misconception_type": "confused_concepts", "nudge": "Hmm?", "explanation": "E.",
+    })
+    fake.respond("ContradictionCheck", {"lecture_quote": "DFS goes deep first using a stack.", "contradicts": True})
+    grade = grade_answer(library, llm, q.id, "DFS uses a queue.")
+    assert grade.misconception.startswith("You said “DFS uses a queue”")
