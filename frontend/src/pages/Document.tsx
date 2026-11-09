@@ -4,6 +4,7 @@ import { useState } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { api, type KukiDocument } from "../api";
 import { KindIcon } from "../components/KindIcon";
+import { LectureAudio } from "../components/LectureAudio";
 import { Button, ErrorNote, Working } from "../components/ui";
 import { KIND_LABEL, partsLabel } from "../lib/format";
 import { usePageTitle } from "../lib/usePageTitle";
@@ -33,7 +34,7 @@ export default function DocumentPage({ panels }: { panels: Record<TabId, (doc: K
 
   return (
     <div className="space-y-6">
-      <DocumentHeader doc={d} />
+      <DocumentHeader doc={d} onChange={doc.setData} />
       {d.status === "processing" && <Working label="Reading your document…" />}
       {d.status === "failed" && <ErrorNote message={d.error ?? "This file couldn't be read."} />}
       {d.status === "ready" && (
@@ -60,7 +61,7 @@ export default function DocumentPage({ panels }: { panels: Record<TabId, (doc: K
   );
 }
 
-function DocumentHeader({ doc }: { doc: KukiDocument }) {
+function DocumentHeader({ doc, onChange }: { doc: KukiDocument; onChange: (d: KukiDocument) => void }) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,11 +89,7 @@ function DocumentHeader({ doc }: { doc: KukiDocument }) {
             {doc.source_url && <a href={doc.source_url} target="_blank" rel="noreferrer" className="underline">Original</a>}
           </p>
         )}
-        {doc.audio_url && (
-          <audio controls preload="none" src={doc.audio_url} className="mt-3 w-full max-w-md">
-            <a href={doc.audio_url}>Lecture recording</a>
-          </audio>
-        )}
+        <LectureAudio doc={doc} onChange={onChange} />
       </div>
       <div className="flex gap-2">
         {confirming ? (

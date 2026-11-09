@@ -15,6 +15,7 @@ export interface KukiDocument {
   license: string | null;
   attribution: string | null;
   audio_url: string | null;
+  has_local_audio: boolean;
   created_at: string;
   segment_count: number;
 }

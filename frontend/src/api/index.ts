@@ -23,6 +23,8 @@ export const api = {
       return http.post<KukiDocument>("/api/documents", form);
     },
     remove: (id: string) => http.del(`/api/documents/${enc(id)}`),
+    saveAudio: (id: string) => http.post<KukiDocument>(`/api/documents/${enc(id)}/audio`),
+    localAudioUrl: (id: string) => `/api/documents/${enc(id)}/audio`,
   },
 
   pack: {
