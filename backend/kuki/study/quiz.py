@@ -14,7 +14,8 @@ from kuki.search.hybrid import Passage
 from kuki.study import prompts
 from kuki.study.extractive import extractive_concepts
 from kuki.study.packs import source_budget
-from kuki.study.quiz_models import QuizDraft, Question
+from kuki.search.bm25 import tokenize
+from kuki.study.quiz_models import Grade, GradeDraft, QuizDraft, Question
 from kuki.study.sources import Citation, SourceSet
 
 log = logging.getLogger(__name__)
@@ -96,3 +97,94 @@ def list_questions(library: Library, doc_id: str) -> list[Question]:
     return [
         Question(id=r[0], document_id=r[1], concept=r[2], prompt=r[3], citations=json.loads(r[4])) for r in rows
     ]
+
+
+# ---- grading ---------------------------------------------------------------
+
+MAX_ANSWER_CHARS = 4000
+
+
+def grade_answer(library: Library, llm: OllamaClient, question_id: int, answer: str) -> Grade:
+    row = library.conn.execute(
+        "SELECT q.id, q.prompt, q.ideal_answer, q.key_ideas, q.citations FROM questions q WHERE q.id = ?",
+        (question_id,),
+    ).fetchone()
+    if row is None:
+        raise NotFound(f"No question with id {question_id}")
+    answer = answer.strip()[:MAX_ANSWER_CHARS]
+    if not answer:
+        raise ValueError("Write an answer first.")
+
+    key_ideas: list[str] = json.loads(row["key_ideas"])
+    citations = [Citation.model_validate(c) for c in json.loads(row["citations"])]
+    source_text = _cited_text(library, citations)
+
+    try:
+        draft = llm.chat_json(
+            library.settings.chat_model,
+            [
+                {"role": "system", "content": prompts.TUTOR},
+                {"role": "user", "content": prompts.grade(row["prompt"], row["ideal_answer"], key_ideas, source_text, answer)},
+            ],
+            GradeDraft,
+            temperature=0.1,  # grading should be consistent, not creative
+            num_ctx=library.settings.num_ctx,
+        )
+        mode = "ai"
+    except OllamaError as exc:
+        log.info("AI grading failed (%s); using keyword overlap.", exc)
+        draft = keyword_grade(answer, key_ideas, row["ideal_answer"])
+        mode = "keyword"
+
+    with transaction(library.conn):
+        cur = library.conn.execute(
+            "INSERT INTO attempts(question_id, answer, verdict, score, misconception, misconception_type, feedback)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (question_id, answer, draft.verdict, draft.score, draft.misconception, draft.misconception_type, draft.model_dump_json()),
+        )
+    return Grade(
+        attempt_id=cur.lastrowid,
+        question_id=question_id,
+        ideal_answer=row["ideal_answer"],
+        key_ideas=key_ideas,
+        citations=citations,
+        mode=mode,
+        **draft.model_dump(),
+    )
+
+
+def _cited_text(library: Library, citations: list[Citation]) -> str:
+    """Full text of the segments a question was built from, for the grader."""
+    if not citations:
+        return "(none)"
+    ids = [c.segment_id for c in citations]
+    rows = library.conn.execute(
+        f"SELECT locator, text FROM segments WHERE id IN ({','.join('?' * len(ids))})", ids
+    ).fetchall()
+    return "\n\n".join(f"({r[0]}) {r[1][:1800]}" for r in rows) or "(none)"
+
+
+def keyword_grade(answer: str, key_ideas: list[str], ideal_answer: str) -> GradeDraft:
+    """Offline backup grader: how many key ideas does the answer touch?
+
+    Crude but honest. It never claims to have found a misconception it cannot
+    see; it just shows which ideas seem to be missing.
+    """
+    answer_terms = set(tokenize(answer))
+    covered, missing = [], []
+    for idea in key_ideas:
+        terms = set(tokenize(idea))
+        overlap = len(terms & answer_terms) / max(1, len(terms))
+        (covered if overlap >= 0.4 else missing).append(idea)
+
+    score = round(100 * len(covered) / max(1, len(key_ideas)))
+    verdict = "correct" if score >= 80 else "partial" if score >= 34 else "incorrect"
+    return GradeDraft(
+        verdict=verdict,
+        score=score,
+        got_right=covered,
+        misconception=("Your answer may be missing: " + "; ".join(missing)) if missing else "",
+        misconception_type="none" if not missing else "missing_step" if covered else "vague",
+        nudge=f"How would you explain {missing[0].rstrip('.').lower()}?" if missing else "Can you give an example?",
+        explanation=ideal_answer,
+    )
