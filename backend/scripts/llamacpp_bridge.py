@@ -57,7 +57,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         if self.path == "/api/chat":
             opts = body.get("options", {})
-            kwargs = {"messages": body["messages"], "temperature": opts.get("temperature", 0.2), "max_tokens": 2048}
+            kwargs = {"messages": body["messages"], "temperature": opts.get("temperature", 0.2), "max_tokens": opts.get("num_predict") or 2048}
             if body.get("format"):
                 kwargs["response_format"] = {"type": "json_object", "schema": body["format"]}
             started = time.time()
